@@ -15,6 +15,11 @@ on:
         description: "Data source (coingecko or twelvedata)"
         required: false
         default: "coingecko"
+      diagnose:
+        description: "Also print AL condition diagnostics (single/pairwise/triple counts)"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   backtest:
@@ -32,4 +37,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run backtest
-        run: python backtest/runner.py "${{ inputs.symbol }}" "${{ inputs.days }}" "${{ inputs.source }}"
+        run: |
+          ARGS=("${{ inputs.symbol }}" "${{ inputs.days }}" "${{ inputs.source }}")
+          if [ "${{ inputs.diagnose }}" = "true" ]; then
+            ARGS+=("--diagnose")
+          fi
+          python backtest/runner.py "${ARGS[@]}"
