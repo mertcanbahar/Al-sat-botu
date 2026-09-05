@@ -256,10 +256,18 @@ def _format_pct(value: Optional[float]) -> str:
     return f"{value * 100:.2f}%" if value is not None else "N/A"
 
 
+def buy_and_hold_return_pct(rows: Sequence[dict]) -> float:
+    """Return of holding `rows[0]`'s close through `rows[-1]`'s close."""
+    return rows[-1]["close"] / rows[0]["close"] - 1.0
+
+
 def print_report(symbol: str, rows: Sequence[dict], result: BacktestResult) -> None:
+    buy_and_hold = buy_and_hold_return_pct(rows)
     print(f"Symbol: {symbol}")
     print(f"Candles: {len(rows)} ({rows[0]['timestamp']} -> {rows[-1]['timestamp']})")
     print(f"Total return: {_format_pct(result.total_return_pct)}")
+    print(f"Buy & hold return: {_format_pct(buy_and_hold)}")
+    print(f"Excess return (strategy - buy & hold): {_format_pct(result.total_return_pct - buy_and_hold)}")
     print(f"Win rate: {_format_pct(result.win_rate)}")
     print(f"Max drawdown: {_format_pct(result.max_drawdown_pct)}")
     print(f"Trade count: {result.trade_count}")
