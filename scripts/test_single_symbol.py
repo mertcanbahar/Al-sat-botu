@@ -19,17 +19,11 @@ from alsatbotu.indicators import add_indicators
 from alsatbotu.rules import Signal, evaluate
 
 INDICATOR_KEYS = (
-    "sma_fast",
-    "sma_slow",
-    "ema_fast",
-    "ema_slow",
+    "ema_20",
+    "ema_50",
     "rsi",
-    "macd",
-    "macd_signal",
-    "macd_hist",
-    "bb_lower",
-    "bb_mid",
-    "bb_upper",
+    "atr",
+    "volume_sma_20",
 )
 
 
@@ -51,10 +45,11 @@ def test_single_symbol(coin_id: str = "bitcoin", days: int = 30) -> None:
     print(f"Symbol: {coin_id}")
     print(f"Candles fetched: {len(rows)}")
     print(f"Latest close: {latest['close']}")
-    print("Indicators (latest candle):")
+    print(f"Latest volume: {_format(latest.get('volume'))}")
+    print("Indicators (latest candle, raw values):")
     for key in INDICATOR_KEYS:
         print(f"  {key}: {_format(latest[key])}")
-    print(f"Signal: {decision.signal.value} (score={decision.score})")
+    print(f"Signal: {decision.signal.value}")
     for reason in decision.reasons:
         print(f"  - {reason}")
     print("OK: data layer and rule engine work for a single symbol.")
