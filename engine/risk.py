@@ -52,6 +52,7 @@ class RiskDecision:
     reasons: list[str] = field(default_factory=list)
     quantity: float = 0.0
     stop_price: float = 0.0
+    capped_by: str | None = None
 
 
 def evaluate_buy(
@@ -62,7 +63,13 @@ def evaluate_buy(
     atr: float,
     current_prices: dict[str, float],
 ) -> RiskDecision:
-    """Decide whether to open a new position and, if so, at what size."""
+    """Decide whether to open a new position and, if so, at what size.
+
+    Available cash and the category exposure cap *size down* the position
+    rather than veto it: the 2%-risk quantity is what the trade would like
+    to be, and the limits are the room it actually has. Only a limit with
+    no room left at all (or a blocked portfolio) rejects the trade.
+    """
     equity = state.equity(current_prices)
     reasons: list[str] = []
 
@@ -80,27 +87,42 @@ def evaluate_buy(
 
     if atr is None or atr <= 0:
         reasons.append("No valid ATR available to size a stop")
+
+    if reasons:
         return RiskDecision(approved=False, reasons=reasons)
 
     stop_price = compute_atr_stop(entry_price, atr)
     quantity = compute_position_size(equity, entry_price, stop_price)
-
     if quantity <= 0:
-        reasons.append("Computed position size is zero (stop not below entry)")
-
-    cost = quantity * entry_price
-    if cost > state.cash:
-        reasons.append(f"Insufficient cash: need {cost:.2f}, have {state.cash:.2f}")
-
-    category_exposure = state.category_exposure(category, current_prices) + cost
-    category_limit = equity * CATEGORY_EXPOSURE_LIMIT_PCT
-    if category_exposure > category_limit:
-        reasons.append(
-            f"Category {category!r} exposure {category_exposure:.2f} would exceed "
-            f"{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f}% limit ({category_limit:.2f})"
+        return RiskDecision(
+            approved=False,
+            reasons=["Computed position size is zero (stop not below entry)"],
+            stop_price=stop_price,
         )
 
-    if reasons:
-        return RiskDecision(approved=False, reasons=reasons, quantity=quantity, stop_price=stop_price)
+    category_room = (
+        equity * CATEGORY_EXPOSURE_LIMIT_PCT - state.category_exposure(category, current_prices)
+    )
+    limits = {
+        "cash": state.cash / entry_price,
+        f"category {category!r} {CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f}% limit": (
+            max(category_room, 0.0) / entry_price
+        ),
+    }
 
-    return RiskDecision(approved=True, quantity=quantity, stop_price=stop_price)
+    capped_by = None
+    for label, max_quantity in limits.items():
+        if max_quantity < quantity:
+            quantity = max_quantity
+            capped_by = label
+
+    if quantity <= 0:
+        return RiskDecision(
+            approved=False,
+            reasons=[f"No room to open a position: {capped_by} is exhausted"],
+            stop_price=stop_price,
+        )
+
+    return RiskDecision(
+        approved=True, quantity=quantity, stop_price=stop_price, capped_by=capped_by
+    )

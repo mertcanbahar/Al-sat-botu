@@ -1,0 +1,29 @@
+name: Daily report
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days of history to fetch when marking positions to market"
+        required: false
+        default: "7"
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send daily risk report
+        run: python scripts/daily_report.py "${{ inputs.days }}"

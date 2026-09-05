@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
       - uses: actions/checkout@v4
 

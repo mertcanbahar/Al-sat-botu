@@ -57,3 +57,12 @@ def read_signals(path: Path = SIGNALS_LEDGER_PATH) -> list[dict]:
 
     with open(path, "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
+
+
+def last_decisions(path: Path = SIGNALS_LEDGER_PATH) -> dict[str, str]:
+    """Return the most recently recorded decision per symbol.
+
+    Used to tell a *new* signal from one that simply persists across runs,
+    so repeating the same decision doesn't re-notify.
+    """
+    return {record["symbol"]: record["decision"] for record in read_signals(path)}

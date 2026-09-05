@@ -15,6 +15,10 @@ TWELVEDATA_API_KEY = os.environ.get("TWELVEDATA_API_KEY", "")
 
 REQUEST_TIMEOUT_SECONDS = 10
 
+TELEGRAM_BASE_URL = "https://api.telegram.org"
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
 # -- Paper portfolio / risk engine --------------------------------------
 
 DATA_DIR = Path(os.environ.get("ALSATBOTU_DATA_DIR", Path(__file__).resolve().parent.parent / "data"))
