@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""Send the daily risk report for the paper portfolio to Telegram.
+
+Reads the saved portfolio state (data/portfolio.json), marks it to market
+with the latest close per held symbol, and reports portfolio value, open
+positions, category exposure, drawdown, hit rate, and any risk warnings.
+
+This script only reads the portfolio -- it never opens or closes a
+position, and it never writes portfolio.json. Run it manually or from
+.github/workflows/daily-report.yml.
+
+Usage:
+    python scripts/daily_report.py [days]
+"""
+from __future__ import annotations
+
+import logging
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from alsatbotu.config import (
+    CATEGORY_EXPOSURE_LIMIT_PCT,
+    MAX_DRAWDOWN_PCT,
+    MAX_OPEN_POSITIONS,
+)
+from alsatbotu.data import get_price_history
+from engine.risk import is_drawdown_halted
+from notify.telegram import send_message
+from portfolio.state import PortfolioState, load_state
+
+# Warn before a limit is actually breached, at this fraction of it.
+WARN_THRESHOLD = 0.9
+
+
+def fetch_current_prices(state: PortfolioState, days: int = 7) -> dict[str, float]:
+    """Latest close per held symbol; symbols that fail to fetch are left out.
+
+    A missing symbol falls back to its entry price in PortfolioState's
+    valuation helpers, so a failed fetch understates movement rather than
+    crashing the report.
+    """
+    prices: dict[str, float] = {}
+    for symbol in state.open_positions:
+        try:
+            rows = get_price_history(symbol, source="coingecko", days=days)
+        except Exception as exc:  # noqa: BLE001 - report must survive a bad symbol
+            print(f"{symbol}: failed to fetch current price ({exc})")
+            continue
+        if rows:
+            prices[symbol] = rows[-1]["close"]
+    return prices
+
+
+def _hit_rate(state: PortfolioState) -> Optional[float]:
+    if not state.closed_trades:
+        return None
+    wins = sum(1 for trade in state.closed_trades if trade.pnl > 0)
+    return wins / len(state.closed_trades)
+
+
+def _warnings(state: PortfolioState, current_prices: dict[str, float], equity: float) -> list[str]:
+    warnings: list[str] = []
+
+    drawdown = (state.peak_equity - equity) / state.peak_equity if state.peak_equity > 0 else 0.0
+    if is_drawdown_halted(equity, state.peak_equity):
+        warnings.append(
+            f"Drawdown %{drawdown * 100:.2f} — yeni AL sinyalleri durduruldu "
+            f"(limit %{MAX_DRAWDOWN_PCT * 100:.0f})"
+        )
+    elif drawdown >= MAX_DRAWDOWN_PCT * WARN_THRESHOLD:
+        warnings.append(
+            f"Drawdown %{drawdown * 100:.2f} — %{MAX_DRAWDOWN_PCT * 100:.0f} limitine yaklaşıyor"
+        )
+
+    if len(state.open_positions) >= MAX_OPEN_POSITIONS:
+        warnings.append(
+            f"Açık pozisyon limiti dolu ({len(state.open_positions)}/{MAX_OPEN_POSITIONS}) "
+            "— yeni pozisyon açılamaz"
+        )
+
+    if equity > 0:
+        categories = {position.category for position in state.open_positions.values()}
+        for category in sorted(categories):
+            share = state.category_exposure(category, current_prices) / equity
+            if share > CATEGORY_EXPOSURE_LIMIT_PCT:
+                warnings.append(
+                    f"{category} kategorisi %{share * 100:.1f} ile "
+                    f"%{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f} limitini aştı"
+                )
+            elif share >= CATEGORY_EXPOSURE_LIMIT_PCT * WARN_THRESHOLD:
+                warnings.append(
+                    f"{category} kategorisi %{share * 100:.1f} ile "
+                    f"%{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f} limitine yaklaşıyor"
+                )
+
+    for symbol, position in state.open_positions.items():
+        price = current_prices.get(symbol)
+        if price is not None and price <= position.stop_price:
+            warnings.append(
+                f"{symbol} fiyatı {price:.4f}, stop seviyesi {position.stop_price:.4f} altında"
+            )
+
+    if state.cash <= 0:
+        warnings.append("Nakit tükendi — yeni pozisyon açılamaz")
+
+    return warnings
+
+
+def build_report(
+    state: PortfolioState,
+    current_prices: dict[str, float],
+    now: datetime | None = None,
+) -> str:
+    now = now or datetime.now(timezone.utc)
+    equity = state.equity(current_prices)
+    position_value = state.position_value(current_prices)
+    total_return = (
+        equity / state.starting_capital - 1.0 if state.starting_capital else 0.0
+    )
+    drawdown = (state.peak_equity - equity) / state.peak_equity if state.peak_equity > 0 else 0.0
+
+    lines = [
+        f"📊 Günlük Risk Raporu — {now:%Y-%m-%d}",
+        "",
+        f"Portföy değeri: {equity:,.2f} (başlangıca göre %{total_return * 100:+.2f})",
+        f"  Nakit: {state.cash:,.2f}",
+        f"  Pozisyonlar: {position_value:,.2f}",
+        "",
+        f"Açık pozisyonlar ({len(state.open_positions)}/{MAX_OPEN_POSITIONS}):",
+    ]
+
+    if state.open_positions:
+        for symbol, position in state.open_positions.items():
+            price = current_prices.get(symbol, position.entry_price)
+            change = (price / position.entry_price - 1.0) if position.entry_price else 0.0
+            lines.append(
+                f"  • {symbol} ({position.category}): {position.quantity:.6f} adet, "
+                f"giriş {position.entry_price:.4f} → {price:.4f} "
+                f"(%{change * 100:+.2f}), stop {position.stop_price:.4f}"
+            )
+    else:
+        lines.append("  • yok")
+
+    lines.extend(["", "Kategori dağılımı:"])
+    categories = {position.category for position in state.open_positions.values()}
+    if categories and equity > 0:
+        for category in sorted(categories):
+            value = state.category_exposure(category, current_prices)
+            lines.append(
+                f"  • {category}: {value:,.2f} (%{value / equity * 100:.1f} / "
+                f"limit %{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f})"
+            )
+    else:
+        lines.append("  • yok")
+
+    hit_rate = _hit_rate(state)
+    wins = sum(1 for trade in state.closed_trades if trade.pnl > 0)
+    hit_rate_text = (
+        f"%{hit_rate * 100:.1f} ({wins}/{len(state.closed_trades)} kapanmış işlem)"
+        if hit_rate is not None
+        else "henüz kapanmış işlem yok"
+    )
+
+    lines.extend(
+        [
+            "",
+            f"Drawdown: %{drawdown * 100:.2f} (tepe {state.peak_equity:,.2f})",
+            f"İsabet oranı: {hit_rate_text}",
+            "",
+            "⚠️ Uyarılar:",
+        ]
+    )
+
+    warnings = _warnings(state, current_prices, equity)
+    if warnings:
+        lines.extend(f"  • {warning}" for warning in warnings)
+    else:
+        lines.append("  • yok")
+
+    return "\n".join(lines)
+
+
+def main(days: int = 7) -> None:
+    state = load_state()
+    current_prices = fetch_current_prices(state, days=days)
+    report = build_report(state, current_prices)
+
+    print(report)
+    send_message(report)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 7)
