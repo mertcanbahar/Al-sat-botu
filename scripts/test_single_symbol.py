@@ -15,7 +15,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.data import get_price_history
+from alsatbotu.indicators import add_indicators
 from alsatbotu.rules import Signal, evaluate
+
+INDICATOR_KEYS = (
+    "sma_fast",
+    "sma_slow",
+    "ema_fast",
+    "ema_slow",
+    "rsi",
+    "macd",
+    "macd_signal",
+    "macd_hist",
+    "bb_lower",
+    "bb_mid",
+    "bb_upper",
+)
+
+
+def _format(value: float | None) -> str:
+    return f"{value:.4f}" if value is not None else "N/A"
 
 
 def test_single_symbol(coin_id: str = "bitcoin", days: int = 30) -> None:
@@ -27,9 +46,14 @@ def test_single_symbol(coin_id: str = "bitcoin", days: int = 30) -> None:
     decision = evaluate(rows)
     assert decision.signal in Signal
 
+    latest = add_indicators(rows)[-1]
+
     print(f"Symbol: {coin_id}")
     print(f"Candles fetched: {len(rows)}")
-    print(f"Latest close: {rows[-1]['close']}")
+    print(f"Latest close: {latest['close']}")
+    print("Indicators (latest candle):")
+    for key in INDICATOR_KEYS:
+        print(f"  {key}: {_format(latest[key])}")
     print(f"Signal: {decision.signal.value} (score={decision.score})")
     for reason in decision.reasons:
         print(f"  - {reason}")
