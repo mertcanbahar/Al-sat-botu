@@ -58,74 +58,60 @@ def rsi(values: Sequence[float], period: int = 14) -> list[Optional[float]]:
     return out
 
 
-def macd(
-    values: Sequence[float], fast: int = 12, slow: int = 26, signal: int = 9
-) -> dict[str, list[Optional[float]]]:
-    ema_fast = ema(values, fast)
-    ema_slow = ema(values, slow)
-    macd_line: list[Optional[float]] = [
-        (f - s) if (f is not None and s is not None) else None
-        for f, s in zip(ema_fast, ema_slow)
+def atr(
+    highs: Sequence[float], lows: Sequence[float], closes: Sequence[float], period: int = 14
+) -> list[Optional[float]]:
+    """Wilder's Average True Range; None until `period` true ranges are available."""
+    n = len(closes)
+    out: list[Optional[float]] = [None] * n
+    if n <= period:
+        return out
+
+    true_ranges = [
+        max(
+            highs[i] - lows[i],
+            abs(highs[i] - closes[i - 1]),
+            abs(lows[i] - closes[i - 1]),
+        )
+        for i in range(1, n)
     ]
 
-    signal_line: list[Optional[float]] = [None] * len(values)
-    hist: list[Optional[float]] = [None] * len(values)
+    avg_tr = sum(true_ranges[:period]) / period
+    out[period] = avg_tr
 
-    first_valid = next((i for i, v in enumerate(macd_line) if v is not None), None)
-    if first_valid is not None:
-        signal_tail = ema(macd_line[first_valid:], signal)
-        for offset, value in enumerate(signal_tail):
-            signal_line[first_valid + offset] = value
-        for i in range(len(values)):
-            if macd_line[i] is not None and signal_line[i] is not None:
-                hist[i] = macd_line[i] - signal_line[i]
+    for i in range(period, len(true_ranges)):
+        avg_tr = (avg_tr * (period - 1) + true_ranges[i]) / period
+        out[i + 1] = avg_tr
 
-    return {"macd": macd_line, "signal": signal_line, "hist": hist}
-
-
-def bollinger_bands(
-    values: Sequence[float], window: int = 20, num_std: float = 2.0
-) -> dict[str, list[Optional[float]]]:
-    mid = sma(values, window)
-    upper: list[Optional[float]] = [None] * len(values)
-    lower: list[Optional[float]] = [None] * len(values)
-
-    for i in range(window - 1, len(values)):
-        window_slice = values[i - window + 1 : i + 1]
-        mean = mid[i]
-        variance = sum((x - mean) ** 2 for x in window_slice) / window
-        std = variance**0.5
-        upper[i] = mean + num_std * std
-        lower[i] = mean - num_std * std
-
-    return {"mid": mid, "upper": upper, "lower": lower}
+    return out
 
 
 def add_indicators(rows: Sequence[dict], price_key: str = "close") -> list[dict]:
-    """Return copies of `rows` with SMA/EMA/RSI/MACD/Bollinger columns attached."""
-    closes = [row[price_key] for row in rows]
+    """Return copies of `rows` with EMA(20)/EMA(50)/RSI(14)/ATR(14)/volume SMA(20) attached.
 
-    sma_fast = sma(closes, 10)
-    sma_slow = sma(closes, 30)
-    ema_fast = ema(closes, 12)
-    ema_slow = ema(closes, 26)
-    rsi_values = rsi(closes, 14)
-    macd_values = macd(closes)
-    bb_values = bollinger_bands(closes)
+    Volume-derived fields are None throughout when any row is missing a
+    "volume" key (e.g. CoinGecko's OHLC endpoint does not provide one).
+    """
+    closes = [row[price_key] for row in rows]
+    highs = [row["high"] for row in rows]
+    lows = [row["low"] for row in rows]
+    volumes = [row.get("volume") for row in rows]
+
+    ema_20 = ema(closes, 20)
+    ema_50 = ema(closes, 50)
+    rsi_14 = rsi(closes, 14)
+    atr_14 = atr(highs, lows, closes, 14)
+
+    has_volume = bool(volumes) and all(v is not None for v in volumes)
+    volume_sma_20 = sma(volumes, 20) if has_volume else [None] * len(rows)
 
     out = []
     for i, row in enumerate(rows):
         enriched = dict(row)
-        enriched["sma_fast"] = sma_fast[i]
-        enriched["sma_slow"] = sma_slow[i]
-        enriched["ema_fast"] = ema_fast[i]
-        enriched["ema_slow"] = ema_slow[i]
-        enriched["rsi"] = rsi_values[i]
-        enriched["macd"] = macd_values["macd"][i]
-        enriched["macd_signal"] = macd_values["signal"][i]
-        enriched["macd_hist"] = macd_values["hist"][i]
-        enriched["bb_mid"] = bb_values["mid"][i]
-        enriched["bb_upper"] = bb_values["upper"][i]
-        enriched["bb_lower"] = bb_values["lower"][i]
+        enriched["ema_20"] = ema_20[i]
+        enriched["ema_50"] = ema_50[i]
+        enriched["rsi"] = rsi_14[i]
+        enriched["atr"] = atr_14[i]
+        enriched["volume_sma_20"] = volume_sma_20[i]
         out.append(enriched)
     return out

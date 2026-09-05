@@ -1,0 +1,35 @@
+name: Manual backtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: "Symbol / coin id to backtest"
+        required: false
+        default: "bitcoin"
+      days:
+        description: "Number of days of history to fetch"
+        required: false
+        default: "180"
+      source:
+        description: "Data source (coingecko or twelvedata)"
+        required: false
+        default: "coingecko"
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backtest
+        run: python backtest/runner.py "${{ inputs.symbol }}" "${{ inputs.days }}" "${{ inputs.source }}"
