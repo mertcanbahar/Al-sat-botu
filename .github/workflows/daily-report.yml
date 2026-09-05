@@ -7,6 +7,9 @@ on:
         description: "Number of days of history to fetch when marking positions to market"
         required: false
         default: "7"
+  schedule:
+    # Weekdays 21:00 UTC
+    - cron: "0 21 * * 1-5"
 
 jobs:
   daily-report:
@@ -26,4 +29,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Send daily risk report
-        run: python scripts/daily_report.py "${{ inputs.days }}"
+        run: python scripts/daily_report.py "${{ inputs.days || '7' }}"
