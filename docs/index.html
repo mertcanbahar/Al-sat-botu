@@ -213,13 +213,31 @@
   #sphere-panel svg { width: 100%; height: auto; display: block; }
   .sphere-ring { fill: none; stroke: var(--line-2); stroke-width: 1; }
   @media (prefers-reduced-motion: no-preference) {
-    .sphere-ring { animation: pulse-ring 3s ease-in-out infinite; }
+    .sphere-ring { animation: pulse-ring 7s ease-in-out infinite; }
   }
-  @keyframes pulse-ring { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-  .sphere-node { cursor: pointer; stroke: #000; stroke-width: 1; }
+  @keyframes pulse-ring { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+  .sphere-node { cursor: pointer; stroke: #000; stroke-width: 1; transform-box: fill-box; transform-origin: center; }
   .sphere-link { stroke: var(--line-2); stroke-width: 1; }
   .sphere-label { fill: var(--gold); font-size: 9px; text-anchor: middle; font-family: inherit; }
   .sphere-core { fill: var(--muted); font-size: 8px; text-anchor: middle; letter-spacing: 0.05em; }
+
+  /* Orbit rotation: each orbit group spins slowly around the sphere center
+     (spin-cw / spin-ccw, per-orbit duration set inline, 40-60s per lap);
+     each node carries a matching counter-spin at the same duration so its
+     circle/label stay upright while its position still travels the orbit. */
+  @media (prefers-reduced-motion: no-preference) {
+    .spin-cw { animation: orbit-spin-cw linear infinite; }
+    .spin-ccw { animation: orbit-spin-ccw linear infinite; }
+  }
+  @keyframes orbit-spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes orbit-spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+  /* Signal pulse: AL/SAT nodes breathe gently; BEKLE/veri-hatası stay put. */
+  @media (prefers-reduced-motion: no-preference) {
+    .sphere-node.signal-buy,
+    .sphere-node.signal-sell { animation: sphere-node-pulse 3.6s ease-in-out infinite; }
+  }
+  @keyframes sphere-node-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }
 
   /* Signal engine */
   .signal-badge {
@@ -683,6 +701,15 @@
   let selectedSymbol = null;
   let onSymbolSelect = () => {};
 
+  // Three orbits, matching the three static wireframe ellipses below --
+  // each spins as a rigid group (CSS animation, no JS loop), own speed and
+  // direction so the sphere doesn't read as one flat spinning disc.
+  const SPHERE_ORBITS = [
+    { rxFactor: 1, ryFactor: 1, duration: 52, direction: "cw" },
+    { rxFactor: 0.65, ryFactor: 1.6, duration: 44, direction: "ccw" },
+    { rxFactor: 1.15, ryFactor: 0.55, duration: 58, direction: "cw" },
+  ];
+
   function renderSphere(container, symbolState, watchlist, portfolio) {
     const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
     if (!symbols.length) { empty(container, "watchlist.json yok"); return; }
@@ -691,36 +718,63 @@
     const cx = size / 2, cy = size / 2;
     const rx = 95, ry = 40;
     const openPositions = (portfolio && portfolio.open_positions) || {};
-    const total = symbols.length;
 
-    const nodes = symbols.map((symbol, i) => {
-      const angle = ((i / total) * 360 * Math.PI) / 180;
-      const x = cx + rx * Math.cos(angle);
-      const y = cy + ry * Math.sin(angle) * (1 + 0.5 * Math.sin(angle * 2));
+    const nodesByOrbit = SPHERE_ORBITS.map(() => []);
+    symbols.forEach((symbol, i) => {
       const entry = symbolState[symbol] || { last: null, error: true };
       const decision = entry.last ? entry.last.decision : null;
       const color = decisionColor(decision, entry.error);
       const big = !!openPositions[symbol];
-      return { symbol, x, y, color, r: big ? 8 : 5 };
+      const pulseClass = decision === "BUY" ? "signal-buy" : decision === "SELL" ? "signal-sell" : "";
+      nodesByOrbit[i % SPHERE_ORBITS.length].push({ symbol, color, pulseClass, r: big ? 8 : 5 });
     });
 
-    const links = nodes.map((n, i) => {
-      const next = nodes[(i + 1) % nodes.length];
-      return `<line class="sphere-link" x1="${n.x}" y1="${n.y}" x2="${next.x}" y2="${next.y}" />`;
+    const orbitGroups = SPHERE_ORBITS.map((orbit, orbitIndex) => {
+      const nodes = nodesByOrbit[orbitIndex];
+      if (!nodes.length) return "";
+      const orbitRx = rx * orbit.rxFactor;
+      const orbitRy = ry * orbit.ryFactor;
+      const counterDirection = orbit.direction === "cw" ? "ccw" : "cw";
+
+      const positioned = nodes.map((n, i) => {
+        const angle = ((i / nodes.length) * 360 * Math.PI) / 180;
+        return { ...n, lx: orbitRx * Math.cos(angle), ly: orbitRy * Math.sin(angle) };
+      });
+
+      const links =
+        positioned.length > 1
+          ? positioned
+              .map((n, i) => {
+                const next = positioned[(i + 1) % positioned.length];
+                return `<line class="sphere-link" x1="${n.lx}" y1="${n.ly}" x2="${next.lx}" y2="${next.ly}" />`;
+              })
+              .join("")
+          : "";
+
+      const nodeMarkup = positioned
+        .map(
+          (n) => `<g transform="translate(${n.lx},${n.ly})">
+              <g class="spin-${counterDirection}" style="animation-duration:${orbit.duration}s">
+                <circle class="sphere-node ${n.pulseClass}" data-symbol="${n.symbol}" cx="0" cy="0" r="${n.r}" fill="${n.color}" />
+                <text class="sphere-label" x="0" y="${-n.r - 3}">${n.symbol}</text>
+              </g>
+            </g>`
+        )
+        .join("");
+
+      return `<g transform="translate(${cx},${cy})">
+          <g class="spin-${orbit.direction}" style="animation-duration:${orbit.duration}s">
+            ${links}
+            ${nodeMarkup}
+          </g>
+        </g>`;
     });
 
     const svg = `<svg viewBox="0 0 ${size} ${size}">
       <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" />
       <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx * 0.65}" ry="${ry * 1.6}" />
       <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx * 1.15}" ry="${ry * 0.55}" />
-      ${links.join("")}
-      ${nodes
-        .map(
-          (n) =>
-            `<circle class="sphere-node" data-symbol="${n.symbol}" cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.color}" />
-             <text class="sphere-label" x="${n.x}" y="${n.y - n.r - 3}">${n.symbol}</text>`
-        )
-        .join("")}
+      ${orbitGroups.join("")}
       <text class="sphere-core" x="${cx}" y="${cy - 4}">AI</text>
       <text class="sphere-core" x="${cx}" y="${cy + 7}">KARAR MOTORU</text>
     </svg>`;
