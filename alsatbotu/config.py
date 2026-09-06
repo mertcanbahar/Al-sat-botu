@@ -35,20 +35,21 @@ MAX_DRAWDOWN_PCT = 0.20
 # Symbol -> category, used by the risk engine's category exposure cap.
 # "other" is the fallback category for any symbol not listed here.
 SYMBOL_CATEGORIES: dict[str, str] = {
-    "bitcoin": "major",
-    "ethereum": "major",
-    "solana": "layer1",
-    "cardano": "layer1",
-    "avalanche-2": "layer1",
-    "uniswap": "defi",
-    "aave": "defi",
-    "dogecoin": "meme",
-    "shiba-inu": "meme",
+    "AAPL": "tech",
+    "MSFT": "tech",
+    "GOOGL": "tech",
+    "AMZN": "tech",
+    "NVDA": "tech",
+    "META": "tech",
+    "JPM": "financials",
+    "XOM": "energy",
+    "WMT": "consumer",
+    "KO": "consumer",
 }
 
 # The default watchlist the portfolio runner evaluates each time it runs.
 WATCHLIST: list[dict] = [
-    {"symbol": symbol, "category": category, "source": "coingecko"}
+    {"symbol": symbol, "category": category, "source": "twelvedata"}
     for symbol, category in SYMBOL_CATEGORIES.items()
 ]
 
