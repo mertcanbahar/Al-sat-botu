@@ -30,25 +30,56 @@
     font-family: "SFMono-Regular", "JetBrains Mono", ui-monospace, Menlo, Consolas, "Courier New", monospace;
   }
 
-  body { padding: 10px; }
+  body { padding: 8px; font-size: 0.9rem; }
 
   a { color: var(--gold); }
 
   .panel {
+    position: relative;
     background: var(--panel);
     border: 1px solid var(--line-2);
-    border-radius: 6px;
-    padding: 10px 12px;
+    border-radius: 4px;
+    padding: 7px 9px;
     min-width: 0;
   }
 
+  /* Terminal-style corner ticks on every panel */
+  .panel::before,
+  .panel::after {
+    content: "";
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  .panel::before {
+    top: -1px;
+    left: -1px;
+    border-top: 1px solid var(--gold);
+    border-left: 1px solid var(--gold);
+  }
+  .panel::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 1px solid var(--gold);
+    border-right: 1px solid var(--gold);
+  }
+
   .panel h2 {
-    margin: 0 0 8px;
-    font-size: 0.72rem;
+    margin: 0 0 6px;
+    padding-bottom: 5px;
+    font-size: 0.66rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold);
     font-weight: 700;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .panel h2::before {
+    content: "// ";
+    color: var(--muted);
+    font-weight: 400;
   }
 
   .muted { color: var(--muted); }
@@ -59,9 +90,9 @@
   .warn { color: var(--warn); }
   .neutral { color: var(--muted); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; font-size: 0.65rem; text-transform: uppercase; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+  th, td { text-align: left; padding: 3px 5px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.6rem; text-transform: uppercase; }
   tr:last-child td { border-bottom: none; }
 
   /* ---------- Top strip ---------- */
@@ -121,7 +152,7 @@
   /* ---------- Layout grid ---------- */
   #app {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     grid-template-columns: 1fr;
     grid-template-areas:
       "pricegrid"
@@ -143,7 +174,7 @@
 
   @media (min-width: 700px) {
     #app {
-      grid-template-columns: 24% 50% 26%;
+      grid-template-columns: 21% 58% 21%;
       grid-template-areas:
         "pricegrid sphere signal"
         "sector    sphere signal"
@@ -214,14 +245,43 @@
     animation: pulse-ring 7s ease-in-out infinite;
   }
   @keyframes pulse-ring { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+  /* Neural core: dense decorative dot cloud + connective lines on the
+     sphere's surface. Each dot/line carries its own --base-op (baked in
+     at render time from its simulated depth, for the pseudo-3D falloff)
+     and --delay (to stagger the shared twinkle keyframes so the whole
+     field doesn't flicker in lockstep) as inline custom properties. */
+  .core-fill { fill: url(#sphereGlow); stroke: var(--line-2); stroke-width: 1; }
+  .neuron {
+    fill: var(--gold);
+    opacity: var(--base-op, 0.4);
+    animation: neuron-twinkle 5.5s ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+  }
+  .neuron-link {
+    stroke: var(--gold);
+    stroke-width: 0.5;
+    fill: none;
+    opacity: var(--base-op, 0.1);
+    animation: neuron-link-twinkle 6.5s ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+  }
+  @keyframes neuron-twinkle {
+    0%, 100% { opacity: var(--base-op, 0.4); }
+    50% { opacity: min(1, calc(var(--base-op, 0.4) * 1.9)); }
+  }
+  @keyframes neuron-link-twinkle {
+    0%, 100% { opacity: var(--base-op, 0.1); }
+    50% { opacity: calc(var(--base-op, 0.1) * 2.4); }
+  }
   /* transform-box/transform-origin are required for a CSS transform (the
      signal pulse below) to animate an SVG shape correctly in every
      browser -- without them some engines animate around the SVG
      viewport's origin instead of the circle's own center. */
   .sphere-node { cursor: pointer; stroke: #000; stroke-width: 1; transform-box: fill-box; transform-origin: center; }
   .sphere-link { stroke: var(--line-2); stroke-width: 1; }
-  .sphere-label { fill: var(--gold); font-size: 9px; text-anchor: middle; font-family: inherit; }
-  .sphere-core { fill: var(--muted); font-size: 8px; text-anchor: middle; letter-spacing: 0.05em; }
+  .sphere-label { fill: var(--gold); font-size: 10px; text-anchor: middle; font-family: inherit; }
+  .sphere-core { fill: var(--muted); font-size: 9px; text-anchor: middle; letter-spacing: 0.05em; }
 
   /* Orbit rotation: each orbit group spins slowly around the sphere center
      (spin-cw / spin-ccw, per-orbit duration set inline, 40-60s per lap);
@@ -249,7 +309,9 @@
     .spin-cw,
     .spin-ccw,
     .sphere-node.signal-buy,
-    .sphere-node.signal-sell {
+    .sphere-node.signal-sell,
+    .neuron,
+    .neuron-link {
       animation: none;
     }
   }
@@ -725,13 +787,80 @@
     { rxFactor: 1.15, ryFactor: 0.55, duration: 58, direction: "cw" },
   ];
 
+  // Decorative "neural" dot cloud on the core sphere's surface -- purely
+  // aesthetic, carries no data. Generated once (30-60 points, uniform on
+  // a sphere) so the layout stays put across refresh() re-renders instead
+  // of reshuffling every poll; the CSS twinkle keyframes provide the only
+  // motion, no JS animation loop.
+  const CORE_R = 62;
+  const NEURON_COUNT = 30 + Math.floor(Math.random() * 31);
+  const NEURONS = (() => {
+    const pts = [];
+    for (let i = 0; i < NEURON_COUNT; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      pts.push({
+        x: CORE_R * Math.sin(phi) * Math.cos(theta),
+        y: CORE_R * Math.cos(phi) * 0.62, // squash vertically for the viewing angle
+        z: CORE_R * Math.sin(phi) * Math.sin(theta),
+      });
+    }
+    return pts;
+  })();
+
+  // Connect each neuron to its nearest neighbour so the field reads as a
+  // sparse mesh rather than loose dust, without an O(n^2) line count.
+  const NEURON_LINKS = (() => {
+    const seen = new Set();
+    const links = [];
+    NEURONS.forEach((p, i) => {
+      let bestJ = -1, bestD = Infinity;
+      NEURONS.forEach((q, j) => {
+        if (i === j) return;
+        const d = Math.hypot(p.x - q.x, p.y - q.y, p.z - q.z);
+        if (d < bestD) { bestD = d; bestJ = j; }
+      });
+      if (bestJ < 0) return;
+      const key = i < bestJ ? `${i}-${bestJ}` : `${bestJ}-${i}`;
+      if (!seen.has(key)) { seen.add(key); links.push([i, bestJ]); }
+    });
+    return links;
+  })();
+
+  function depthT(z) {
+    return (z / CORE_R + 1) / 2; // 0 = far side, 1 = near side
+  }
+
+  function renderNeuralField() {
+    const order = NEURONS.map((_, i) => i).sort((a, b) => NEURONS[a].z - NEURONS[b].z);
+
+    const links = NEURON_LINKS.map(([a, b], idx) => {
+      const p1 = NEURONS[a], p2 = NEURONS[b];
+      const t = (depthT(p1.z) + depthT(p2.z)) / 2;
+      const op = (0.05 + t * 0.2).toFixed(2);
+      const delay = (idx * 0.17).toFixed(2);
+      return `<line class="neuron-link" x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" style="--base-op:${op};--delay:${delay}s" />`;
+    }).join("");
+
+    const dots = order.map((i) => {
+      const p = NEURONS[i];
+      const t = depthT(p.z);
+      const r = (0.7 + t * 1.5).toFixed(2);
+      const op = (0.14 + t * 0.62).toFixed(2);
+      const delay = (i * 0.13).toFixed(2);
+      return `<circle class="neuron" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" style="--base-op:${op};--delay:${delay}s" />`;
+    }).join("");
+
+    return links + dots;
+  }
+
   function renderSphere(container, symbolState, watchlist, portfolio) {
     const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
     if (!symbols.length) { empty(container, "watchlist.json yok"); return; }
 
-    const size = 240;
+    const size = 300;
     const cx = size / 2, cy = size / 2;
-    const rx = 95, ry = 40;
+    const rx = 112, ry = 46;
     const openPositions = (portfolio && portfolio.open_positions) || {};
 
     const nodesByOrbit = SPHERE_ORBITS.map(() => []);
@@ -741,7 +870,7 @@
       const color = decisionColor(decision, entry.error);
       const big = !!openPositions[symbol];
       const pulseClass = decision === "BUY" ? "signal-buy" : decision === "SELL" ? "signal-sell" : "";
-      nodesByOrbit[i % SPHERE_ORBITS.length].push({ symbol, color, pulseClass, r: big ? 8 : 5 });
+      nodesByOrbit[i % SPHERE_ORBITS.length].push({ symbol, color, pulseClass, r: big ? 10 : 7 });
     });
 
     const orbitGroups = SPHERE_ORBITS.map((orbit, orbitIndex) => {
@@ -786,6 +915,15 @@
     });
 
     const svg = `<svg viewBox="0 0 ${size} ${size}">
+      <defs>
+        <radialGradient id="sphereGlow" cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#3d2e0e" />
+          <stop offset="55%" stop-color="#170f04" />
+          <stop offset="100%" stop-color="#000000" />
+        </radialGradient>
+      </defs>
+      <circle class="core-fill" cx="${cx}" cy="${cy}" r="${CORE_R}" />
+      <g transform="translate(${cx},${cy})">${renderNeuralField()}</g>
       <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" />
       <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx * 0.65}" ry="${ry * 1.6}" />
       <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx * 1.15}" ry="${ry * 0.55}" />
