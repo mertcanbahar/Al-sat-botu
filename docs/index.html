@@ -1,0 +1,579 @@
+<title>Al-Sat Botu Panel</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1d212a;
+    --border: #262b36;
+    --text: #e6e8ec;
+    --muted: #9aa4b2;
+    --green: #22c55e;
+    --red: #ef4444;
+    --gray: #6b7280;
+    --accent: #3b82f6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    padding: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 1.25rem; margin: 0; }
+  h2 { font-size: 1rem; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  #refreshed { font-size: 0.8rem; color: var(--muted); }
+
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  button:hover { border-color: var(--accent); }
+
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 800px) {
+    .strip { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+  .stat .value { font-size: 1.25rem; font-weight: 700; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .neutral { color: var(--text); }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+  }
+
+  canvas { width: 100%; height: 260px; display: block; }
+
+  .empty {
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 24px 0;
+    text-align: center;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 420px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .pill.al { background: rgba(34,197,94,0.15); color: var(--green); }
+  .pill.sat { background: rgba(239,68,68,0.15); color: var(--red); }
+  .pill.bekle { background: rgba(107,114,128,0.2); color: var(--gray); }
+
+  .reason { color: var(--muted); font-size: 0.8rem; max-width: 320px; white-space: normal; }
+
+  .health-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .health-row:last-child { border-bottom: none; }
+  .health-name { font-weight: 600; }
+  .health-meta { color: var(--muted); font-size: 0.8rem; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot.ok { background: var(--green); }
+  .dot.warn { background: #f59e0b; }
+  .dot.err { background: var(--red); }
+</style>
+
+<header>
+  <h1>Al-Sat Botu — Kontrol Paneli</h1>
+  <div>
+    <span id="refreshed"></span>
+    <button id="refresh-btn" type="button">Yenile</button>
+  </div>
+</header>
+
+<section class="strip" id="strip">
+  <div class="stat"><div class="label">Portföy Değeri</div><div class="value" id="stat-equity">—</div></div>
+  <div class="stat"><div class="label">Başlangıca Göre</div><div class="value" id="stat-return">—</div></div>
+  <div class="stat"><div class="label">Nakit Oranı</div><div class="value" id="stat-cash">—</div></div>
+  <div class="stat"><div class="label">Drawdown</div><div class="value" id="stat-dd">—</div></div>
+  <div class="stat"><div class="label">İsabet Oranı</div><div class="value" id="stat-hit">—</div></div>
+</section>
+
+<section class="card">
+  <h2>Portföy Değeri (Zaman İçinde)</h2>
+  <div id="chart-wrap"><canvas id="chart"></canvas></div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <h2>Açık Pozisyonlar</h2>
+    <div id="positions-wrap"></div>
+  </div>
+  <div class="card">
+    <h2>Son Sinyaller</h2>
+    <div id="signals-wrap"></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Sistem Sağlığı</h2>
+  <div id="health-wrap"></div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+
+  const PORTFOLIO_URL = "data/portfolio.json";
+  const SIGNALS_URL = "data/signals.jsonl";
+
+  const fmtNum = (n, digits = 2) =>
+    typeof n === "number" && isFinite(n)
+      ? n.toLocaleString("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+      : "—";
+
+  const fmtPct = (n, digits = 2) =>
+    typeof n === "number" && isFinite(n)
+      ? `${n >= 0 ? "+" : ""}${(n * 100).toLocaleString("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`
+      : "—";
+
+  const fmtDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString("tr-TR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+
+  function empty(container, message = "Henüz veri yok") {
+    container.innerHTML = `<div class="empty">${message}</div>`;
+  }
+
+  async function fetchJson(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const lastModified = res.headers.get("last-modified");
+    return { data: await res.json(), lastModified };
+  }
+
+  async function fetchText(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const lastModified = res.headers.get("last-modified");
+    return { text: await res.text(), lastModified };
+  }
+
+  function parseJsonl(text) {
+    return text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch (_err) {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  }
+
+  function latestPricesFromSignals(signals) {
+    const prices = {};
+    for (const record of signals) {
+      if (record && record.symbol && typeof record.price === "number") {
+        const prev = prices[record.symbol];
+        if (!prev || new Date(record.timestamp) >= new Date(prev.timestamp)) {
+          prices[record.symbol] = { price: record.price, timestamp: record.timestamp };
+        }
+      }
+    }
+    return prices;
+  }
+
+  function computeMetrics(portfolio, signalPrices) {
+    const positions = Object.values(portfolio.open_positions || {});
+    const currentPrice = (symbol, fallback) =>
+      signalPrices[symbol] ? signalPrices[symbol].price : fallback;
+
+    const positionValue = positions.reduce(
+      (sum, p) => sum + p.quantity * currentPrice(p.symbol, p.entry_price),
+      0
+    );
+    const equity = (portfolio.cash || 0) + positionValue;
+    const startingCapital = portfolio.starting_capital || 0;
+    const peakEquity = Math.max(portfolio.peak_equity || 0, equity);
+    const totalReturn = startingCapital ? equity / startingCapital - 1 : null;
+    const cashRatio = equity > 0 ? (portfolio.cash || 0) / equity : null;
+    const drawdown = peakEquity > 0 ? (peakEquity - equity) / peakEquity : null;
+
+    const closedTrades = portfolio.closed_trades || [];
+    const wins = closedTrades.filter((t) => t.pnl > 0).length;
+    const hitRate = closedTrades.length ? wins / closedTrades.length : null;
+
+    return { equity, totalReturn, cashRatio, drawdown, hitRate, currentPrice, closedTrades, positions };
+  }
+
+  function renderStrip(metrics) {
+    document.getElementById("stat-equity").textContent = fmtNum(metrics.equity);
+
+    const returnEl = document.getElementById("stat-return");
+    returnEl.textContent = fmtPct(metrics.totalReturn);
+    returnEl.className = "value " + (metrics.totalReturn > 0 ? "up" : metrics.totalReturn < 0 ? "down" : "neutral");
+
+    document.getElementById("stat-cash").textContent =
+      metrics.cashRatio == null ? "—" : fmtPct(metrics.cashRatio, 1);
+
+    const ddEl = document.getElementById("stat-dd");
+    ddEl.textContent = metrics.drawdown == null ? "—" : `%${fmtNum(metrics.drawdown * 100, 2)}`;
+    ddEl.className = "value " + (metrics.drawdown > 0.001 ? "down" : "neutral");
+
+    document.getElementById("stat-hit").textContent =
+      metrics.hitRate == null ? "veri yok" : `%${fmtNum(metrics.hitRate * 100, 1)}`;
+  }
+
+  function buildEquitySeries(portfolio, metrics) {
+    const startingCapital = portfolio.starting_capital;
+    if (typeof startingCapital !== "number") return [];
+
+    const trades = [...(portfolio.closed_trades || [])].sort(
+      (a, b) => new Date(a.exit_date) - new Date(b.exit_date)
+    );
+
+    const points = [];
+    const firstDate =
+      trades[0]?.entry_date ||
+      trades[0]?.exit_date ||
+      Object.values(portfolio.open_positions || {})[0]?.entry_date ||
+      null;
+
+    points.push({ date: firstDate, value: startingCapital, label: "Başlangıç" });
+
+    let running = startingCapital;
+    for (const trade of trades) {
+      running += trade.pnl;
+      points.push({ date: trade.exit_date, value: running, label: trade.symbol });
+    }
+
+    points.push({ date: new Date().toISOString(), value: metrics.equity, label: "Şimdi" });
+    return points.filter((p) => p.date && typeof p.value === "number" && isFinite(p.value));
+  }
+
+  function drawChart(canvas, points) {
+    const wrap = canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    const cssWidth = wrap.clientWidth;
+    const cssHeight = 260;
+    canvas.width = cssWidth * dpr;
+    canvas.height = cssHeight * dpr;
+    canvas.style.width = cssWidth + "px";
+    canvas.style.height = cssHeight + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    if (!points.length) {
+      ctx.fillStyle = "#9aa4b2";
+      ctx.font = "13px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Henüz veri yok", cssWidth / 2, cssHeight / 2);
+      return;
+    }
+
+    const padding = { top: 16, right: 16, bottom: 24, left: 64 };
+    const plotW = cssWidth - padding.left - padding.right;
+    const plotH = cssHeight - padding.top - padding.bottom;
+
+    const values = points.map((p) => p.value);
+    const times = points.map((p) => new Date(p.date).getTime());
+    let minV = Math.min(...values);
+    let maxV = Math.max(...values);
+    if (minV === maxV) {
+      minV -= 1;
+      maxV += 1;
+    }
+    const minT = Math.min(...times);
+    const maxT = Math.max(...times);
+    const spanT = maxT - minT || 1;
+
+    const x = (t) => padding.left + ((t - minT) / spanT) * plotW;
+    const y = (v) => padding.top + (1 - (v - minV) / (maxV - minV)) * plotH;
+
+    ctx.strokeStyle = "#262b36";
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#9aa4b2";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "right";
+    const gridLines = 4;
+    for (let i = 0; i <= gridLines; i++) {
+      const v = minV + ((maxV - minV) * i) / gridLines;
+      const yy = y(v);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, yy);
+      ctx.lineTo(cssWidth - padding.right, yy);
+      ctx.stroke();
+      ctx.fillText(fmtNum(v, 0), padding.left - 8, yy + 4);
+    }
+
+    const startColor = points[points.length - 1].value >= points[0].value ? "#22c55e" : "#ef4444";
+    ctx.strokeStyle = startColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      const px = x(new Date(p.date).getTime());
+      const py = y(p.value);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+
+    ctx.fillStyle = startColor;
+    points.forEach((p) => {
+      const px = x(new Date(p.date).getTime());
+      const py = y(p.value);
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = "#9aa4b2";
+    ctx.textAlign = "left";
+    ctx.fillText(fmtDate(points[0].date).split(" ")[0], padding.left, cssHeight - 6);
+    ctx.textAlign = "right";
+    ctx.fillText(fmtDate(points[points.length - 1].date).split(" ")[0], cssWidth - padding.right, cssHeight - 6);
+  }
+
+  function renderPositions(container, metrics) {
+    if (!metrics.positions.length) {
+      empty(container, "Açık pozisyon yok");
+      return;
+    }
+    const rows = metrics.positions
+      .map((p) => {
+        const current = metrics.currentPrice(p.symbol, p.entry_price);
+        const pct = p.entry_price ? current / p.entry_price - 1 : 0;
+        const cls = pct > 0 ? "up" : pct < 0 ? "down" : "neutral";
+        return `<tr>
+          <td>${p.symbol}</td>
+          <td>${fmtNum(p.entry_price, 4)}</td>
+          <td>${fmtNum(current, 4)}</td>
+          <td class="${cls}">${fmtPct(pct)}</td>
+          <td>${fmtNum(p.stop_price, 4)}</td>
+        </tr>`;
+      })
+      .join("");
+    container.innerHTML = `<table>
+      <thead><tr><th>Sembol</th><th>Giriş</th><th>Güncel</th><th>%</th><th>Stop</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function decisionPill(decision) {
+    if (decision === "BUY") return '<span class="pill al">AL</span>';
+    if (decision === "SELL") return '<span class="pill sat">SAT</span>';
+    return '<span class="pill bekle">BEKLE</span>';
+  }
+
+  function renderSignals(container, signals) {
+    if (!signals.length) {
+      empty(container, "Henüz sinyal yok");
+      return;
+    }
+    const last50 = signals.slice(-50).reverse();
+    const rows = last50
+      .map((s) => {
+        const reasons = Array.isArray(s.triggering_rule) ? s.triggering_rule.join("; ") : (s.triggering_rule || "—");
+        return `<tr>
+          <td>${fmtDate(s.timestamp)}</td>
+          <td>${s.symbol || "—"}</td>
+          <td>${decisionPill(s.decision)}</td>
+          <td class="reason">${reasons || "—"}</td>
+        </tr>`;
+      })
+      .join("");
+    container.innerHTML = `<table>
+      <thead><tr><th>Tarih</th><th>Sembol</th><th>Karar</th><th>Tetikleyen Kural</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function healthRow(name, status, meta) {
+    const dotClass = status === "ok" ? "ok" : status === "warn" ? "warn" : "err";
+    const statusText = status === "ok" ? "Çalışıyor" : status === "warn" ? "Bayat Veri" : "Veri Yok";
+    return `<div class="health-row">
+      <div><span class="dot ${dotClass}"></span><span class="health-name">${name}</span></div>
+      <div class="health-meta">${statusText}${meta ? " — " + meta : ""}</div>
+    </div>`;
+  }
+
+  function renderHealth(container, portfolioInfo, signalsInfo, signals) {
+    const rows = [];
+
+    rows.push(
+      healthRow(
+        "Portföy verisi (data/portfolio.json)",
+        portfolioInfo.ok ? "ok" : "err",
+        portfolioInfo.ok
+          ? `son güncelleme: ${portfolioInfo.lastModified ? fmtDate(portfolioInfo.lastModified) : "bilinmiyor"}`
+          : portfolioInfo.error
+      )
+    );
+
+    rows.push(
+      healthRow(
+        "Sinyal defteri (data/signals.jsonl)",
+        signalsInfo.ok ? "ok" : "err",
+        signalsInfo.ok
+          ? `son güncelleme: ${signalsInfo.lastModified ? fmtDate(signalsInfo.lastModified) : "bilinmiyor"}, ${signals.length} kayıt`
+          : signalsInfo.error
+      )
+    );
+
+    if (signals.length) {
+      const bySymbol = {};
+      for (const s of signals) {
+        if (!s.symbol) continue;
+        const prev = bySymbol[s.symbol];
+        if (!prev || new Date(s.timestamp) >= new Date(prev.timestamp)) bySymbol[s.symbol] = s;
+      }
+      const now = Date.now();
+      const staleMs = 1000 * 60 * 60 * 24 * 3; // 3 gün
+      Object.keys(bySymbol)
+        .sort()
+        .forEach((symbol) => {
+          const last = bySymbol[symbol];
+          const age = now - new Date(last.timestamp).getTime();
+          const status = isFinite(age) && age > staleMs ? "warn" : "ok";
+          rows.push(
+            healthRow(
+              `${symbol} modülü`,
+              status,
+              `son karar: ${decisionLabel(last.decision)} — ${fmtDate(last.timestamp)}`
+            )
+          );
+        });
+    }
+
+    container.innerHTML = rows.join("");
+  }
+
+  function decisionLabel(decision) {
+    if (decision === "BUY") return "AL";
+    if (decision === "SELL") return "SAT";
+    return "BEKLE";
+  }
+
+  async function loadPortfolio() {
+    try {
+      const { data, lastModified } = await fetchJson(PORTFOLIO_URL);
+      return { ok: true, data, lastModified };
+    } catch (err) {
+      return { ok: false, error: err.message || "okunamadı" };
+    }
+  }
+
+  async function loadSignals() {
+    try {
+      const { text, lastModified } = await fetchText(SIGNALS_URL);
+      return { ok: true, signals: parseJsonl(text), lastModified };
+    } catch (err) {
+      return { ok: false, error: err.message || "okunamadı", signals: [] };
+    }
+  }
+
+  let lastPoints = [];
+
+  async function refresh() {
+    const stripEls = ["stat-equity", "stat-return", "stat-cash", "stat-dd", "stat-hit"];
+    stripEls.forEach((id) => (document.getElementById(id).textContent = "—"));
+
+    const [portfolioResult, signalsResult] = await Promise.all([loadPortfolio(), loadSignals()]);
+    const signals = signalsResult.signals || [];
+    const signalPrices = latestPricesFromSignals(signals);
+
+    const positionsWrap = document.getElementById("positions-wrap");
+    const signalsWrap = document.getElementById("signals-wrap");
+    const healthWrap = document.getElementById("health-wrap");
+    const chartCanvas = document.getElementById("chart");
+
+    if (portfolioResult.ok) {
+      const metrics = computeMetrics(portfolioResult.data, signalPrices);
+      renderStrip(metrics);
+      renderPositions(positionsWrap, metrics);
+      lastPoints = buildEquitySeries(portfolioResult.data, metrics);
+      drawChart(chartCanvas, lastPoints);
+    } else {
+      empty(positionsWrap, "Henüz veri yok");
+      lastPoints = [];
+      drawChart(chartCanvas, lastPoints);
+    }
+
+    if (signalsResult.ok) {
+      renderSignals(signalsWrap, signals);
+    } else {
+      empty(signalsWrap, "Henüz veri yok");
+    }
+
+    renderHealth(healthWrap, portfolioResult, signalsResult, signals);
+
+    document.getElementById("refreshed").textContent = `Son yenileme: ${fmtDate(new Date().toISOString())}`;
+  }
+
+  document.getElementById("refresh-btn").addEventListener("click", refresh);
+  window.addEventListener("resize", () => drawChart(document.getElementById("chart"), lastPoints));
+
+  refresh();
+})();
+</script>
