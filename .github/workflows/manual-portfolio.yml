@@ -38,7 +38,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/portfolio.json data/signals.jsonl
+          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl; do
+            [ -f "$f" ] && git add "$f"
+          done
           if git diff --cached --quiet; then
             echo "No portfolio changes to commit."
           else
