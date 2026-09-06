@@ -40,6 +40,11 @@ WARN_THRESHOLD = 0.9
 def fetch_current_prices(state: PortfolioState, days: int = 7) -> dict[str, float]:
     """Latest close per held symbol; symbols that fail to fetch are left out.
 
+    Each symbol is fetched from the same source it was opened against (see
+    `alsatbotu.config.source_for`) -- stock tickers like AAPL don't exist as
+    CoinGecko coin ids, so hardcoding one source here would silently fail
+    to re-price every stock position and understate drawdown/stop warnings.
+
     A missing symbol falls back to its entry price in PortfolioState's
     valuation helpers, so a failed fetch understates movement rather than
     crashing the report.
