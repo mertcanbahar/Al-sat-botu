@@ -1,1 +1,1 @@
-"""Backtesting harness for alsatbotu.rules -- no rule logic lives here."""
+"""Backtesting harness for alsatbotu.signal -- no rule logic lives here."""

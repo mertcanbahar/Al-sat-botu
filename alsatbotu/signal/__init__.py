@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Sequence
 
-from .indicators import add_indicators
+from ..indicators import add_indicators
 
 RSI_BUY_MIN = 40
 RSI_BUY_MAX = 65

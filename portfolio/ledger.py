@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from alsatbotu.config import SIGNALS_LEDGER_PATH
-from alsatbotu.rules import Decision
+from alsatbotu.signal import Decision
 
 
 def log_signal(

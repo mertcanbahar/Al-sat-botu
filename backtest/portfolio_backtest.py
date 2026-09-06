@@ -2,7 +2,7 @@
 """Does the live rule engine beat equal-weight buy-and-hold?
 
 Runs two separate simulations, both driven by the exact same production
-code -- `alsatbotu.rules.evaluate()` for signals and `engine.risk.evaluate_buy()`
+code -- `alsatbotu.signal.evaluate()` for signals and `engine.risk.evaluate_buy()`
 for position sizing / portfolio guardrails. Neither is modified or
 reimplemented here.
 
@@ -65,7 +65,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.config import SYMBOL_CATEGORIES
 from alsatbotu.indicators import add_indicators
-from alsatbotu.rules import Signal, evaluate
+from alsatbotu.signal import Signal, evaluate
 from engine.risk import evaluate_buy
 from portfolio.state import PortfolioState, close_position, open_position, update_peak_equity
 

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from . import config
+from .. import config
 
 
 class DiskCache:

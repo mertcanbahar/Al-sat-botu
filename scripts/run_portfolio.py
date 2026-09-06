@@ -2,7 +2,7 @@
 """Run one paper-trading pass over the watchlist and update the portfolio.
 
 For each symbol in `alsatbotu.config.WATCHLIST`:
-  1. Fetch price history and evaluate the rule engine (alsatbotu.rules).
+  1. Fetch price history and evaluate the rule engine (alsatbotu.signal).
   2. Append the signal to the ledger (portfolio/ledger.py), regardless of
      whether it results in a trade.
   3. On BUY: ask the risk engine (engine/risk.py) whether to open a
@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from alsatbotu.config import DATA_DIR, WATCHLIST
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
-from alsatbotu.rules import Decision, Signal, evaluate
+from alsatbotu.signal import Decision, Signal, evaluate
 from engine.risk import evaluate_buy
 from notify.telegram import is_configured as telegram_is_configured, send_message
 from portfolio.ledger import last_decisions, log_signal

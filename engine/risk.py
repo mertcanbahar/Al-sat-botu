@@ -4,7 +4,7 @@ Rules:
   - Position size risks at most `RISK_PER_TRADE_PCT` (2%) of current equity,
     sized off the distance between entry price and the ATR stop.
   - The ATR stop uses the same multiplier as the SELL rule in
-    `alsatbotu.rules` (entry_price - ATR_STOP_MULTIPLIER * atr), so a
+    `alsatbotu.signal` (entry_price - ATR_STOP_MULTIPLIER * atr), so a
     position's stop is consistent with the rule that would exit it.
   - No single category (see `alsatbotu.config.SYMBOL_CATEGORIES`) may hold
     more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity.
@@ -22,7 +22,7 @@ from alsatbotu.config import (
     MAX_OPEN_POSITIONS,
     RISK_PER_TRADE_PCT,
 )
-from alsatbotu.rules import ATR_STOP_MULTIPLIER
+from alsatbotu.signal import ATR_STOP_MULTIPLIER
 from portfolio.state import PortfolioState
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backtest runner: replays alsatbotu.rules.evaluate() over historical candles.
+"""Backtest runner: replays alsatbotu.signal.evaluate() over historical candles.
 
 This does not change the rule engine in any way -- it calls the exact same
 `rules.evaluate()` used live, one bar at a time on an expanding window (no
@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
-from alsatbotu.rules import RSI_BUY_MAX, RSI_BUY_MIN, Signal, evaluate
+from alsatbotu.signal import RSI_BUY_MAX, RSI_BUY_MIN, Signal, evaluate
 
 
 @dataclass
@@ -296,7 +296,7 @@ def main(
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Backtest alsatbotu.rules over historical candles.")
+    parser = argparse.ArgumentParser(description="Backtest alsatbotu.signal over historical candles.")
     parser.add_argument("symbol", nargs="?", default="bitcoin")
     parser.add_argument("days", nargs="?", type=int, default=180)
     parser.add_argument("source", nargs="?", default="coingecko")
