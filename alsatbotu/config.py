@@ -53,9 +53,16 @@ WATCHLIST: list[dict] = [
     for symbol, category in SYMBOL_CATEGORIES.items()
 ]
 
+# Symbol -> data source, derived from the watchlist above.
+SYMBOL_SOURCES: dict[str, str] = {entry["symbol"]: entry["source"] for entry in WATCHLIST}
+
 
 def category_for(symbol: str) -> str:
     return SYMBOL_CATEGORIES.get(symbol, "other")
+
+
+def source_for(symbol: str) -> str:
+    return SYMBOL_SOURCES.get(symbol, "coingecko")
 
 
 def asset_type_for(source: str) -> str:
