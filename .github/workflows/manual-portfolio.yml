@@ -71,7 +71,19 @@ jobs:
           done
           if git diff --cached --quiet; then
             echo "No portfolio changes to commit."
-          else
-            git commit -m "chore: update paper portfolio state and dashboard data"
-            git push
+            exit 0
           fi
+          git commit -m "chore: update paper portfolio state and dashboard data"
+          # main can move between checkout and this push (another workflow's
+          # commit landing first) -- rebase onto the latest main and retry
+          # rather than failing the whole run over a push race.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::Failed to push portfolio state after 5 attempts."
+          exit 1

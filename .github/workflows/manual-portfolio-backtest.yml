@@ -37,7 +37,20 @@ jobs:
           git add backtest/results/summary.md backtest/results/results.json backtest/results/results.csv backtest/results/dashboard.json
           if git diff --cached --quiet; then
             echo "No backtest changes to commit."
-          else
-            git commit -m "chore: update portfolio backtest results"
-            git push
+            exit 0
           fi
+          git commit -m "chore: update portfolio backtest results"
+          # This job runs for several minutes fetching data before it ever
+          # commits, so main can easily move underneath it (another
+          # workflow's push) between checkout and push. Rebase onto the
+          # latest main and retry a few times rather than failing outright.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::Failed to push backtest results after 5 attempts."
+          exit 1
