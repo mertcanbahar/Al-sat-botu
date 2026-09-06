@@ -1,0 +1,43 @@
+name: Manual portfolio backtest (strategy vs. buy-and-hold)
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Years of daily history to backtest"
+        required: false
+        default: "5"
+
+permissions:
+  contents: write
+
+jobs:
+  portfolio-backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run 20-symbol portfolio backtest
+        run: python backtest/portfolio_backtest.py --years "${{ inputs.years || '5' }}" --out-dir backtest/results
+
+      - name: Commit and push backtest results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/summary.md backtest/results/results.json backtest/results/results.csv backtest/results/dashboard.json
+          if git diff --cached --quiet; then
+            echo "No backtest changes to commit."
+          else
+            git commit -m "chore: update portfolio backtest results"
+            git push
+          fi
