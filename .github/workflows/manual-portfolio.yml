@@ -34,16 +34,44 @@ jobs:
       - name: Run portfolio update
         run: python scripts/run_portfolio.py "${{ inputs.days || '60' }}"
 
-      - name: Commit and push portfolio state
+      - name: Generate docs/watchlist.json
+        run: |
+          python - <<'PY'
+          import json
+          from alsatbotu.config import WATCHLIST
+
+          data = [{"symbol": w["symbol"], "category": w["category"]} for w in WATCHLIST]
+          with open("docs/watchlist.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Sync data/ into docs/data/
+        run: |
+          mkdir -p docs/data
+          for f in portfolio.json signals.jsonl health.json equity.jsonl; do
+            [ -f "data/$f" ] && cp "data/$f" "docs/data/$f"
+          done
+
+      # GitHub Actions does not trigger other workflows' `on: push` events
+      # for pushes made with the default GITHUB_TOKEN (this job's own
+      # commit), so pages.yml never re-runs on its own after this job
+      # pushes -- the dashboard would keep serving whatever docs/data/
+      # last looked like at the last human push. Committing the refreshed
+      # docs/watchlist.json and docs/data/ here, in the same commit as
+      # data/, is what keeps the live panel in sync with every run.
+      - name: Commit and push portfolio state + dashboard data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl; do
+          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl \
+                    docs/watchlist.json docs/data/portfolio.json docs/data/signals.jsonl \
+                    docs/data/health.json docs/data/equity.jsonl; do
             [ -f "$f" ] && git add "$f"
           done
           if git diff --cached --quiet; then
             echo "No portfolio changes to commit."
           else
-            git commit -m "chore: update paper portfolio state"
+            git commit -m "chore: update paper portfolio state and dashboard data"
             git push
           fi
