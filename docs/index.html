@@ -87,9 +87,7 @@
   #topbar .meta { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--muted); }
   .live-dot {
     width: 8px; height: 8px; border-radius: 50%; background: var(--up); display: inline-block;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .live-dot { animation: pulse-dot 3s ease-in-out infinite; }
+    animation: pulse-dot 3s ease-in-out infinite;
   }
   @keyframes pulse-dot { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
@@ -211,11 +209,15 @@
 
   /* Sphere */
   #sphere-panel svg { width: 100%; height: auto; display: block; }
-  .sphere-ring { fill: none; stroke: var(--line-2); stroke-width: 1; }
-  @media (prefers-reduced-motion: no-preference) {
-    .sphere-ring { animation: pulse-ring 7s ease-in-out infinite; }
+  .sphere-ring {
+    fill: none; stroke: var(--line-2); stroke-width: 1;
+    animation: pulse-ring 7s ease-in-out infinite;
   }
   @keyframes pulse-ring { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+  /* transform-box/transform-origin are required for a CSS transform (the
+     signal pulse below) to animate an SVG shape correctly in every
+     browser -- without them some engines animate around the SVG
+     viewport's origin instead of the circle's own center. */
   .sphere-node { cursor: pointer; stroke: #000; stroke-width: 1; transform-box: fill-box; transform-origin: center; }
   .sphere-link { stroke: var(--line-2); stroke-width: 1; }
   .sphere-label { fill: var(--gold); font-size: 9px; text-anchor: middle; font-family: inherit; }
@@ -225,19 +227,32 @@
      (spin-cw / spin-ccw, per-orbit duration set inline, 40-60s per lap);
      each node carries a matching counter-spin at the same duration so its
      circle/label stay upright while its position still travels the orbit. */
-  @media (prefers-reduced-motion: no-preference) {
-    .spin-cw { animation: orbit-spin-cw linear infinite; }
-    .spin-ccw { animation: orbit-spin-ccw linear infinite; }
-  }
+  .spin-cw, .spin-ccw { transform-origin: 0 0; }
+  .spin-cw { animation: orbit-spin-cw linear infinite; }
+  .spin-ccw { animation: orbit-spin-ccw linear infinite; }
   @keyframes orbit-spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes orbit-spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
   /* Signal pulse: AL/SAT nodes breathe gently; BEKLE/veri-hatası stay put. */
-  @media (prefers-reduced-motion: no-preference) {
-    .sphere-node.signal-buy,
-    .sphere-node.signal-sell { animation: sphere-node-pulse 3.6s ease-in-out infinite; }
-  }
+  .sphere-node.signal-buy,
+  .sphere-node.signal-sell { animation: sphere-node-pulse 3.6s ease-in-out infinite; }
   @keyframes sphere-node-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.22); } }
+
+  /* All animations above run by default; this is the opt-out, not the
+     opt-in. Some mobile browsers don't reliably match
+     "(prefers-reduced-motion: no-preference)" even with no OS setting
+     turned on, which silently disables every animation gated that way --
+     defaulting to motion and only stripping it here is the safe order. */
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot,
+    .sphere-ring,
+    .spin-cw,
+    .spin-ccw,
+    .sphere-node.signal-buy,
+    .sphere-node.signal-sell {
+      animation: none;
+    }
+  }
 
   /* Signal engine */
   .signal-badge {
