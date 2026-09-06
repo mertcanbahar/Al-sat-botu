@@ -1,183 +1,438 @@
-<title>Al-Sat Botu Panel</title>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AL/SAT ZEKA SISTEMI — Kontrol Paneli</title>
 <style>
   :root {
-    color-scheme: dark;
-    --bg: #0f1115;
-    --panel: #171a21;
-    --panel-2: #1d212a;
-    --border: #262b36;
-    --text: #e6e8ec;
-    --muted: #9aa4b2;
-    --green: #22c55e;
-    --red: #ef4444;
-    --gray: #6b7280;
-    --accent: #3b82f6;
+    --gold: #f5c34b;
+    --up: #00e57a;
+    --down: #ff4d4d;
+    --warn: #ffb020;
+    --muted: #7c7566;
+    --text: #e6e2d5;
+    --line: #1f1a0a;
+    --line-2: #2b2007;
+    --bg: #000;
+    --panel: #0a0805;
   }
 
   * { box-sizing: border-box; }
 
-  body {
+  html, body {
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    padding: 16px;
-    max-width: 1100px;
-    margin: 0 auto;
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    font-family: "SFMono-Regular", "JetBrains Mono", ui-monospace, Menlo, Consolas, "Courier New", monospace;
   }
 
-  h1 { font-size: 1.25rem; margin: 0; }
-  h2 { font-size: 1rem; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+  body { padding: 10px; }
 
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
+  a { color: var(--gold); }
 
-  #refreshed { font-size: 0.8rem; color: var(--muted); }
-
-  button {
-    background: var(--panel-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 0.85rem;
-  }
-  button:hover { border-color: var(--accent); }
-
-  .strip {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  @media (max-width: 800px) {
-    .strip { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  .stat {
+  .panel {
     background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-  }
-  .stat .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
-  .stat .value { font-size: 1.25rem; font-weight: 700; }
-  .up { color: var(--green); }
-  .down { color: var(--red); }
-  .neutral { color: var(--text); }
-
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 16px;
-    overflow-x: auto;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    min-width: 0;
   }
 
-  canvas { width: 100%; height: 260px; display: block; }
-
-  .empty {
-    color: var(--muted);
-    font-size: 0.9rem;
-    padding: 24px 0;
-    text-align: center;
-  }
-
-  .grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  @media (max-width: 800px) {
-    .grid-2 { grid-template-columns: 1fr; }
-  }
-
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 420px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
-  tr:last-child td { border-bottom: none; }
-
-  .pill {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.75rem;
+  .panel h2 {
+    margin: 0 0 8px;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
     font-weight: 700;
   }
-  .pill.al { background: rgba(34,197,94,0.15); color: var(--green); }
-  .pill.sat { background: rgba(239,68,68,0.15); color: var(--red); }
-  .pill.bekle { background: rgba(107,114,128,0.2); color: var(--gray); }
 
-  .reason { color: var(--muted); font-size: 0.8rem; max-width: 320px; white-space: normal; }
+  .muted { color: var(--muted); }
+  .empty { color: var(--muted); font-size: 0.8rem; padding: 14px 0; text-align: center; }
 
-  .health-row {
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .warn { color: var(--warn); }
+  .neutral { color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.65rem; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ---------- Top strip ---------- */
+  #topbar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    gap: 12px;
+    justify-content: space-between;
+    gap: 10px;
     flex-wrap: wrap;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
   }
-  .health-row:last-child { border-bottom: none; }
-  .health-name { font-weight: 600; }
-  .health-meta { color: var(--muted); font-size: 0.8rem; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-  .dot.ok { background: var(--green); }
-  .dot.warn { background: #f59e0b; }
-  .dot.err { background: var(--red); }
-</style>
+  #topbar .brand { display: flex; align-items: center; gap: 10px; }
+  #topbar .logo {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: var(--gold);
+  }
+  #topbar h1 { font-size: 0.85rem; margin: 0; letter-spacing: 0.06em; color: var(--gold); }
+  #topbar .meta { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--muted); }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--up); display: inline-block;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .live-dot { animation: pulse-dot 3s ease-in-out infinite; }
+  }
+  @keyframes pulse-dot { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
-<header>
-  <h1>Al-Sat Botu — Kontrol Paneli</h1>
-  <div>
-    <span id="refreshed"></span>
-    <button id="refresh-btn" type="button">Yenile</button>
+  /* ---------- Tabs ---------- */
+  #tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  #tabs button {
+    flex: 1;
+    background: var(--panel);
+    color: var(--muted);
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 0.75rem;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  #tabs button.active { color: var(--gold); border-color: var(--gold); }
+  #tab-inactive-msg {
+    display: none;
+    text-align: center;
+    color: var(--muted);
+    padding: 30px 10px;
+    border: 1px dashed var(--line-2);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+  }
+
+  /* ---------- Layout grid ---------- */
+  #app {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "pricegrid"
+      "sector"
+      "sphere"
+      "signal"
+      "chart"
+      "indicators"
+      "sectorcols"
+      "lastsignals"
+      "portfolioring"
+      "heatmap"
+      "equity"
+      "positions"
+      "risk"
+      "system"
+      "metrics";
+  }
+
+  @media (min-width: 700px) {
+    #app {
+      grid-template-columns: 24% 50% 26%;
+      grid-template-areas:
+        "pricegrid sphere signal"
+        "sector    sphere signal"
+        "sector    chart  heatmap"
+        "sectorcols chart heatmap"
+        "indicators indicators indicators"
+        "equity   equity  equity"
+        "portfolioring risk positions"
+        "lastsignals lastsignals system"
+        "metrics  metrics metrics";
+    }
+  }
+
+  #pricegrid { grid-area: pricegrid; }
+  #sector { grid-area: sector; }
+  #sphere-panel { grid-area: sphere; }
+  #signal-panel { grid-area: signal; }
+  #chart-panel { grid-area: chart; }
+  #indicators-panel { grid-area: indicators; }
+  #sectorcols { grid-area: sectorcols; }
+  #lastsignals { grid-area: lastsignals; }
+  #portfolioring { grid-area: portfolioring; }
+  #heatmap-panel { grid-area: heatmap; }
+  #equity-panel { grid-area: equity; }
+  #positions-panel { grid-area: positions; }
+  #risk-panel { grid-area: risk; }
+  #system-panel { grid-area: system; }
+  #metrics { grid-area: metrics; }
+
+  @media (min-width: 700px) {
+    #indicators-panel { display: none; }
+    #sectorcols { display: none; }
+  }
+  @media (max-width: 699px) {
+    #risk-panel, #positions-panel { display: none; }
+  }
+
+  /* Price grid */
+  #pricegrid .grid3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .price-cell {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  .price-cell .sym { font-size: 0.72rem; color: var(--text); font-weight: 700; }
+  .price-cell .px { font-size: 0.8rem; margin-top: 2px; }
+  .price-cell .pct { font-size: 0.7rem; }
+
+  /* Sector trends (narrow column) */
+  .sector-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 0.75rem; }
+  .sector-row:last-child { border-bottom: none; }
+  .spark { flex: 1; height: 18px; }
+
+  /* Sector columns (3-col, mobile only) */
+  #sectorcols .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  #sectorcols .col h3 { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; margin: 0 0 6px; }
+  #sectorcols .col .item { font-size: 0.72rem; padding: 3px 0; display: flex; justify-content: space-between; gap: 4px; }
+
+  /* Sphere */
+  #sphere-panel svg { width: 100%; height: auto; display: block; }
+  .sphere-ring { fill: none; stroke: var(--line-2); stroke-width: 1; }
+  @media (prefers-reduced-motion: no-preference) {
+    .sphere-ring { animation: pulse-ring 3s ease-in-out infinite; }
+  }
+  @keyframes pulse-ring { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  .sphere-node { cursor: pointer; stroke: #000; stroke-width: 1; }
+  .sphere-link { stroke: var(--line-2); stroke-width: 1; }
+  .sphere-label { fill: var(--gold); font-size: 9px; text-anchor: middle; font-family: inherit; }
+  .sphere-core { fill: var(--muted); font-size: 8px; text-anchor: middle; letter-spacing: 0.05em; }
+
+  /* Signal engine */
+  .signal-badge {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .signal-badge.al { background: rgba(0,229,122,0.12); color: var(--up); border: 1px solid var(--up); }
+  .signal-badge.sat { background: rgba(255,77,77,0.12); color: var(--down); border: 1px solid var(--down); }
+  .signal-badge.bekle { background: rgba(124,117,102,0.12); color: var(--muted); border: 1px solid var(--muted); }
+  .rule-count { font-size: 0.72rem; color: var(--muted); margin-bottom: 10px; }
+  .bar-row { margin-bottom: 8px; }
+  .bar-row .bar-label { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); margin-bottom: 2px; }
+  .bar-track { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--gold); }
+
+  /* Chart block */
+  #chart-panel .chart-wrap { display: flex; gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
+  #chart-panel svg { flex: 1 1 60%; min-width: 0; height: 160px; }
+  #chart-panel .indicators-inline { flex: 0 0 38%; font-size: 0.75rem; }
+  #chart-panel .indicators-inline .ind-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--line); }
+
+  .indicators-inline .ind-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 0.75rem; }
+
+  /* Heatmap */
+  #heatmap-panel .heat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .heat-cell {
+    padding: 8px 4px;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--line-2);
+  }
+
+  /* Portfolio ring */
+  #portfolioring svg { display: block; margin: 0 auto; }
+  #portfolioring .ring-legend { display: flex; justify-content: center; gap: 14px; font-size: 0.68rem; margin-top: 6px; }
+  #portfolioring .ring-legend span::before {
+    content: "";
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+  }
+  #portfolioring .leg-cash::before { background: var(--gold); }
+  #portfolioring .leg-pos::before { background: var(--muted); }
+
+  /* Equity chart */
+  #equity-panel svg { width: 100%; height: 180px; display: block; }
+
+  /* Metrics strip */
+  #metrics .strip5 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  @media (min-width: 700px) { #metrics .strip5 { grid-template-columns: repeat(5, 1fr); } }
+  #metrics .m-cell { border: 1px solid var(--line); border-radius: 4px; padding: 8px; text-align: center; }
+  #metrics .m-cell .m-label { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; }
+  #metrics .m-cell .m-value { font-size: 0.95rem; margin-top: 3px; }
+
+  /* Health / status */
+  .health-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line); gap: 8px; font-size: 0.75rem; }
+  .health-row:last-child { border-bottom: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; flex: 0 0 auto; }
+  .dot.ok { background: var(--up); }
+  .dot.warn { background: var(--warn); }
+  .dot.err { background: var(--down); }
+  .health-name { font-weight: 600; }
+  .health-detail { color: var(--muted); text-align: right; }
+
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; }
+  .pill.al { background: rgba(0,229,122,0.12); color: var(--up); }
+  .pill.sat { background: rgba(255,77,77,0.12); color: var(--down); }
+  .pill.bekle { background: rgba(124,117,102,0.2); color: var(--muted); }
+  .pill.err { background: rgba(255,176,32,0.15); color: var(--warn); }
+
+  #footer-summary {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  #footer-summary b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="logo">AS</span>
+    <h1>AL/SAT ZEKA SISTEMI</h1>
+  </div>
+  <div class="meta">
+    <span class="live-dot" aria-hidden="true"></span>
+    <span id="last-run">Son çalıştırma: —</span>
   </div>
 </header>
 
-<section class="strip" id="strip">
-  <div class="stat"><div class="label">Portföy Değeri</div><div class="value" id="stat-equity">—</div></div>
-  <div class="stat"><div class="label">Başlangıca Göre</div><div class="value" id="stat-return">—</div></div>
-  <div class="stat"><div class="label">Nakit Oranı</div><div class="value" id="stat-cash">—</div></div>
-  <div class="stat"><div class="label">Drawdown</div><div class="value" id="stat-dd">—</div></div>
-  <div class="stat"><div class="label">İsabet Oranı</div><div class="value" id="stat-hit">—</div></div>
-</section>
+<nav id="tabs">
+  <button type="button" class="active" data-tab="borsa">Borsa</button>
+  <button type="button" data-tab="forex">Forex</button>
+  <button type="button" data-tab="kripto">Kripto</button>
+</nav>
+<div id="tab-inactive-msg">Bu varlık sınıfı henüz aktif değil.</div>
 
-<section class="card">
-  <h2>Portföy Değeri (Zaman İçinde)</h2>
-  <div id="chart-wrap"><canvas id="chart"></canvas></div>
-</section>
+<main id="app">
 
-<section class="grid-2">
-  <div class="card">
-    <h2>Açık Pozisyonlar</h2>
-    <div id="positions-wrap"></div>
-  </div>
-  <div class="card">
+  <section class="panel" id="pricegrid">
+    <h2>Fiyat Izgarası</h2>
+    <div id="pricegrid-body" class="grid3"></div>
+  </section>
+
+  <section class="panel" id="sector">
+    <h2>Sektör Trendleri</h2>
+    <div id="sector-body"></div>
+  </section>
+
+  <section class="panel" id="sphere-panel">
+    <h2>Karar Çekirdeği</h2>
+    <div id="sphere-body"></div>
+  </section>
+
+  <section class="panel" id="signal-panel">
+    <h2>Sinyal Motoru</h2>
+    <div id="signal-body"></div>
+  </section>
+
+  <section class="panel" id="chart-panel">
+    <h2 id="chart-title">Grafik — <span id="chart-symbol">—</span></h2>
+    <div class="chart-wrap">
+      <svg id="candle-chart" viewBox="0 0 300 160" preserveAspectRatio="none"></svg>
+      <div class="indicators-inline" id="indicators-inline-body"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="indicators-panel">
+    <h2>Teknik Göstergeler</h2>
+    <div id="indicators-body"></div>
+  </section>
+
+  <section class="panel" id="sectorcols">
+    <h2>Sektör Sütunları</h2>
+    <div id="sectorcols-body" class="cols3"></div>
+  </section>
+
+  <section class="panel" id="lastsignals">
     <h2>Son Sinyaller</h2>
-    <div id="signals-wrap"></div>
-  </div>
-</section>
+    <div id="lastsignals-body"></div>
+  </section>
 
-<section class="card">
-  <h2>Sistem Sağlığı</h2>
-  <div id="health-wrap"></div>
-</section>
+  <section class="panel" id="portfolioring">
+    <h2>Portföy Halkası</h2>
+    <div id="portfolioring-body"></div>
+  </section>
+
+  <section class="panel" id="heatmap-panel">
+    <h2>Karar Isı Haritası</h2>
+    <div id="heatmap-body" class="heat-grid"></div>
+  </section>
+
+  <section class="panel" id="equity-panel">
+    <h2>Portföy Eğrisi</h2>
+    <div id="equity-body"></div>
+  </section>
+
+  <section class="panel" id="positions-panel">
+    <h2>Aktif Pozisyonlar</h2>
+    <div id="positions-body"></div>
+  </section>
+
+  <section class="panel" id="risk-panel">
+    <h2>Risk Monitörü</h2>
+    <div id="risk-body"></div>
+  </section>
+
+  <section class="panel" id="system-panel">
+    <h2>Sistem Durumu</h2>
+    <div id="system-body"></div>
+  </section>
+
+  <section class="panel" id="metrics">
+    <h2>Özet</h2>
+    <div class="strip5" id="metrics-body"></div>
+  </section>
+
+</main>
+
+<div id="footer-summary"></div>
 
 <script>
 (function () {
   "use strict";
 
+  const WATCHLIST_URL = "watchlist.json";
   const PORTFOLIO_URL = "data/portfolio.json";
   const SIGNALS_URL = "data/signals.jsonl";
+  const HEALTH_URL = "data/health.json";
+  const EQUITY_URL = "data/equity.jsonl";
+
+  const CAT_LABELS = { tech: "Teknoloji", financials: "Finans", energy: "Enerji", consumer: "Tüketim", other: "Diğer" };
+  const CAT_GROUPS = [
+    { key: "teknoloji", label: "Teknoloji", cats: ["tech"] },
+    { key: "finans-enerji", label: "Finans / Enerji", cats: ["financials", "energy"] },
+    { key: "tuketim", label: "Tüketim", cats: ["consumer"] },
+  ];
 
   const fmtNum = (n, digits = 2) =>
     typeof n === "number" && isFinite(n)
@@ -196,317 +451,31 @@
     return d.toLocaleString("tr-TR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   };
 
-  function empty(container, message = "Henüz veri yok") {
+  function empty(container, message = "veri yok") {
     container.innerHTML = `<div class="empty">${message}</div>`;
   }
 
   async function fetchJson(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const lastModified = res.headers.get("last-modified");
-    return { data: await res.json(), lastModified };
+    return await res.json();
   }
 
   async function fetchText(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const lastModified = res.headers.get("last-modified");
-    return { text: await res.text(), lastModified };
+    return await res.text();
   }
 
   function parseJsonl(text) {
     return text
       .split("\n")
-      .map((line) => line.trim())
+      .map((l) => l.trim())
       .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch (_err) {
-          return null;
-        }
+      .map((l) => {
+        try { return JSON.parse(l); } catch (_e) { return null; }
       })
       .filter(Boolean);
-  }
-
-  function latestPricesFromSignals(signals) {
-    const prices = {};
-    for (const record of signals) {
-      if (record && record.symbol && typeof record.price === "number") {
-        const prev = prices[record.symbol];
-        if (!prev || new Date(record.timestamp) >= new Date(prev.timestamp)) {
-          prices[record.symbol] = { price: record.price, timestamp: record.timestamp };
-        }
-      }
-    }
-    return prices;
-  }
-
-  function computeMetrics(portfolio, signalPrices) {
-    const positions = Object.values(portfolio.open_positions || {});
-    const currentPrice = (symbol, fallback) =>
-      signalPrices[symbol] ? signalPrices[symbol].price : fallback;
-
-    const positionValue = positions.reduce(
-      (sum, p) => sum + p.quantity * currentPrice(p.symbol, p.entry_price),
-      0
-    );
-    const equity = (portfolio.cash || 0) + positionValue;
-    const startingCapital = portfolio.starting_capital || 0;
-    const peakEquity = Math.max(portfolio.peak_equity || 0, equity);
-    const totalReturn = startingCapital ? equity / startingCapital - 1 : null;
-    const cashRatio = equity > 0 ? (portfolio.cash || 0) / equity : null;
-    const drawdown = peakEquity > 0 ? (peakEquity - equity) / peakEquity : null;
-
-    const closedTrades = portfolio.closed_trades || [];
-    const wins = closedTrades.filter((t) => t.pnl > 0).length;
-    const hitRate = closedTrades.length ? wins / closedTrades.length : null;
-
-    return { equity, totalReturn, cashRatio, drawdown, hitRate, currentPrice, closedTrades, positions };
-  }
-
-  function renderStrip(metrics) {
-    document.getElementById("stat-equity").textContent = fmtNum(metrics.equity);
-
-    const returnEl = document.getElementById("stat-return");
-    returnEl.textContent = fmtPct(metrics.totalReturn);
-    returnEl.className = "value " + (metrics.totalReturn > 0 ? "up" : metrics.totalReturn < 0 ? "down" : "neutral");
-
-    document.getElementById("stat-cash").textContent =
-      metrics.cashRatio == null ? "—" : fmtPct(metrics.cashRatio, 1);
-
-    const ddEl = document.getElementById("stat-dd");
-    ddEl.textContent = metrics.drawdown == null ? "—" : `%${fmtNum(metrics.drawdown * 100, 2)}`;
-    ddEl.className = "value " + (metrics.drawdown > 0.001 ? "down" : "neutral");
-
-    document.getElementById("stat-hit").textContent =
-      metrics.hitRate == null ? "veri yok" : `%${fmtNum(metrics.hitRate * 100, 1)}`;
-  }
-
-  function buildEquitySeries(portfolio, metrics) {
-    const startingCapital = portfolio.starting_capital;
-    if (typeof startingCapital !== "number") return [];
-
-    const trades = [...(portfolio.closed_trades || [])].sort(
-      (a, b) => new Date(a.exit_date) - new Date(b.exit_date)
-    );
-
-    const points = [];
-    const firstDate =
-      trades[0]?.entry_date ||
-      trades[0]?.exit_date ||
-      Object.values(portfolio.open_positions || {})[0]?.entry_date ||
-      null;
-
-    points.push({ date: firstDate, value: startingCapital, label: "Başlangıç" });
-
-    let running = startingCapital;
-    for (const trade of trades) {
-      running += trade.pnl;
-      points.push({ date: trade.exit_date, value: running, label: trade.symbol });
-    }
-
-    points.push({ date: new Date().toISOString(), value: metrics.equity, label: "Şimdi" });
-    return points.filter((p) => p.date && typeof p.value === "number" && isFinite(p.value));
-  }
-
-  function drawChart(canvas, points) {
-    const wrap = canvas.parentElement;
-    const dpr = window.devicePixelRatio || 1;
-    const cssWidth = wrap.clientWidth;
-    const cssHeight = 260;
-    canvas.width = cssWidth * dpr;
-    canvas.height = cssHeight * dpr;
-    canvas.style.width = cssWidth + "px";
-    canvas.style.height = cssHeight + "px";
-
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cssWidth, cssHeight);
-
-    if (!points.length) {
-      ctx.fillStyle = "#9aa4b2";
-      ctx.font = "13px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Henüz veri yok", cssWidth / 2, cssHeight / 2);
-      return;
-    }
-
-    const padding = { top: 16, right: 16, bottom: 24, left: 64 };
-    const plotW = cssWidth - padding.left - padding.right;
-    const plotH = cssHeight - padding.top - padding.bottom;
-
-    const values = points.map((p) => p.value);
-    const times = points.map((p) => new Date(p.date).getTime());
-    let minV = Math.min(...values);
-    let maxV = Math.max(...values);
-    if (minV === maxV) {
-      minV -= 1;
-      maxV += 1;
-    }
-    const minT = Math.min(...times);
-    const maxT = Math.max(...times);
-    const spanT = maxT - minT || 1;
-
-    const x = (t) => padding.left + ((t - minT) / spanT) * plotW;
-    const y = (v) => padding.top + (1 - (v - minV) / (maxV - minV)) * plotH;
-
-    ctx.strokeStyle = "#262b36";
-    ctx.lineWidth = 1;
-    ctx.fillStyle = "#9aa4b2";
-    ctx.font = "11px sans-serif";
-    ctx.textAlign = "right";
-    const gridLines = 4;
-    for (let i = 0; i <= gridLines; i++) {
-      const v = minV + ((maxV - minV) * i) / gridLines;
-      const yy = y(v);
-      ctx.beginPath();
-      ctx.moveTo(padding.left, yy);
-      ctx.lineTo(cssWidth - padding.right, yy);
-      ctx.stroke();
-      ctx.fillText(fmtNum(v, 0), padding.left - 8, yy + 4);
-    }
-
-    const startColor = points[points.length - 1].value >= points[0].value ? "#22c55e" : "#ef4444";
-    ctx.strokeStyle = startColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    points.forEach((p, i) => {
-      const px = x(new Date(p.date).getTime());
-      const py = y(p.value);
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
-    ctx.stroke();
-
-    ctx.fillStyle = startColor;
-    points.forEach((p) => {
-      const px = x(new Date(p.date).getTime());
-      const py = y(p.value);
-      ctx.beginPath();
-      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    ctx.fillStyle = "#9aa4b2";
-    ctx.textAlign = "left";
-    ctx.fillText(fmtDate(points[0].date).split(" ")[0], padding.left, cssHeight - 6);
-    ctx.textAlign = "right";
-    ctx.fillText(fmtDate(points[points.length - 1].date).split(" ")[0], cssWidth - padding.right, cssHeight - 6);
-  }
-
-  function renderPositions(container, metrics) {
-    if (!metrics.positions.length) {
-      empty(container, "Açık pozisyon yok");
-      return;
-    }
-    const rows = metrics.positions
-      .map((p) => {
-        const current = metrics.currentPrice(p.symbol, p.entry_price);
-        const pct = p.entry_price ? current / p.entry_price - 1 : 0;
-        const cls = pct > 0 ? "up" : pct < 0 ? "down" : "neutral";
-        return `<tr>
-          <td>${p.symbol}</td>
-          <td>${fmtNum(p.entry_price, 4)}</td>
-          <td>${fmtNum(current, 4)}</td>
-          <td class="${cls}">${fmtPct(pct)}</td>
-          <td>${fmtNum(p.stop_price, 4)}</td>
-        </tr>`;
-      })
-      .join("");
-    container.innerHTML = `<table>
-      <thead><tr><th>Sembol</th><th>Giriş</th><th>Güncel</th><th>%</th><th>Stop</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  }
-
-  function decisionPill(decision) {
-    if (decision === "BUY") return '<span class="pill al">AL</span>';
-    if (decision === "SELL") return '<span class="pill sat">SAT</span>';
-    return '<span class="pill bekle">BEKLE</span>';
-  }
-
-  function renderSignals(container, signals) {
-    if (!signals.length) {
-      empty(container, "Henüz sinyal yok");
-      return;
-    }
-    const last50 = signals.slice(-50).reverse();
-    const rows = last50
-      .map((s) => {
-        const reasons = Array.isArray(s.triggering_rule) ? s.triggering_rule.join("; ") : (s.triggering_rule || "—");
-        return `<tr>
-          <td>${fmtDate(s.timestamp)}</td>
-          <td>${s.symbol || "—"}</td>
-          <td>${decisionPill(s.decision)}</td>
-          <td class="reason">${reasons || "—"}</td>
-        </tr>`;
-      })
-      .join("");
-    container.innerHTML = `<table>
-      <thead><tr><th>Tarih</th><th>Sembol</th><th>Karar</th><th>Tetikleyen Kural</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-  }
-
-  function healthRow(name, status, meta) {
-    const dotClass = status === "ok" ? "ok" : status === "warn" ? "warn" : "err";
-    const statusText = status === "ok" ? "Çalışıyor" : status === "warn" ? "Bayat Veri" : "Veri Yok";
-    return `<div class="health-row">
-      <div><span class="dot ${dotClass}"></span><span class="health-name">${name}</span></div>
-      <div class="health-meta">${statusText}${meta ? " — " + meta : ""}</div>
-    </div>`;
-  }
-
-  function renderHealth(container, portfolioInfo, signalsInfo, signals) {
-    const rows = [];
-
-    rows.push(
-      healthRow(
-        "Portföy verisi (data/portfolio.json)",
-        portfolioInfo.ok ? "ok" : "err",
-        portfolioInfo.ok
-          ? `son güncelleme: ${portfolioInfo.lastModified ? fmtDate(portfolioInfo.lastModified) : "bilinmiyor"}`
-          : portfolioInfo.error
-      )
-    );
-
-    rows.push(
-      healthRow(
-        "Sinyal defteri (data/signals.jsonl)",
-        signalsInfo.ok ? "ok" : "err",
-        signalsInfo.ok
-          ? `son güncelleme: ${signalsInfo.lastModified ? fmtDate(signalsInfo.lastModified) : "bilinmiyor"}, ${signals.length} kayıt`
-          : signalsInfo.error
-      )
-    );
-
-    if (signals.length) {
-      const bySymbol = {};
-      for (const s of signals) {
-        if (!s.symbol) continue;
-        const prev = bySymbol[s.symbol];
-        if (!prev || new Date(s.timestamp) >= new Date(prev.timestamp)) bySymbol[s.symbol] = s;
-      }
-      const now = Date.now();
-      const staleMs = 1000 * 60 * 60 * 24 * 3; // 3 gün
-      Object.keys(bySymbol)
-        .sort()
-        .forEach((symbol) => {
-          const last = bySymbol[symbol];
-          const age = now - new Date(last.timestamp).getTime();
-          const status = isFinite(age) && age > staleMs ? "warn" : "ok";
-          rows.push(
-            healthRow(
-              `${symbol} modülü`,
-              status,
-              `son karar: ${decisionLabel(last.decision)} — ${fmtDate(last.timestamp)}`
-            )
-          );
-        });
-    }
-
-    container.innerHTML = rows.join("");
   }
 
   function decisionLabel(decision) {
@@ -515,10 +484,35 @@
     return "BEKLE";
   }
 
+  function decisionColor(decision, hasError) {
+    if (hasError) return "#ffb020";
+    if (decision === "BUY") return "#00e57a";
+    if (decision === "SELL") return "#ff4d4d";
+    return "#c9a94f"; // soluk altın (BEKLE)
+  }
+
+  function pillClass(decision) {
+    if (decision === "BUY") return "al";
+    if (decision === "SELL") return "sat";
+    return "bekle";
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Data loading                                                        */
+  /* ------------------------------------------------------------------ */
+
+  async function loadWatchlist() {
+    try {
+      const data = await fetchJson(WATCHLIST_URL);
+      return Array.isArray(data) ? data : [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
   async function loadPortfolio() {
     try {
-      const { data, lastModified } = await fetchJson(PORTFOLIO_URL);
-      return { ok: true, data, lastModified };
+      return { ok: true, data: await fetchJson(PORTFOLIO_URL) };
     } catch (err) {
       return { ok: false, error: err.message || "okunamadı" };
     }
@@ -526,54 +520,624 @@
 
   async function loadSignals() {
     try {
-      const { text, lastModified } = await fetchText(SIGNALS_URL);
-      return { ok: true, signals: parseJsonl(text), lastModified };
+      const text = await fetchText(SIGNALS_URL);
+      return { ok: true, signals: parseJsonl(text) };
     } catch (err) {
       return { ok: false, error: err.message || "okunamadı", signals: [] };
     }
   }
 
-  let lastPoints = [];
-
-  async function refresh() {
-    const stripEls = ["stat-equity", "stat-return", "stat-cash", "stat-dd", "stat-hit"];
-    stripEls.forEach((id) => (document.getElementById(id).textContent = "—"));
-
-    const [portfolioResult, signalsResult] = await Promise.all([loadPortfolio(), loadSignals()]);
-    const signals = signalsResult.signals || [];
-    const signalPrices = latestPricesFromSignals(signals);
-
-    const positionsWrap = document.getElementById("positions-wrap");
-    const signalsWrap = document.getElementById("signals-wrap");
-    const healthWrap = document.getElementById("health-wrap");
-    const chartCanvas = document.getElementById("chart");
-
-    if (portfolioResult.ok) {
-      const metrics = computeMetrics(portfolioResult.data, signalPrices);
-      renderStrip(metrics);
-      renderPositions(positionsWrap, metrics);
-      lastPoints = buildEquitySeries(portfolioResult.data, metrics);
-      drawChart(chartCanvas, lastPoints);
-    } else {
-      empty(positionsWrap, "Henüz veri yok");
-      lastPoints = [];
-      drawChart(chartCanvas, lastPoints);
+  async function loadHealth() {
+    try {
+      return { ok: true, data: await fetchJson(HEALTH_URL) };
+    } catch (_err) {
+      return { ok: false };
     }
-
-    if (signalsResult.ok) {
-      renderSignals(signalsWrap, signals);
-    } else {
-      empty(signalsWrap, "Henüz veri yok");
-    }
-
-    renderHealth(healthWrap, portfolioResult, signalsResult, signals);
-
-    document.getElementById("refreshed").textContent = `Son yenileme: ${fmtDate(new Date().toISOString())}`;
   }
 
-  document.getElementById("refresh-btn").addEventListener("click", refresh);
-  window.addEventListener("resize", () => drawChart(document.getElementById("chart"), lastPoints));
+  async function loadEquity() {
+    try {
+      const text = await fetchText(EQUITY_URL);
+      const rows = parseJsonl(text)
+        .map((r) => ({ date: r.date || r.timestamp, value: r.value != null ? r.value : r.equity }))
+        .filter((r) => r.date && typeof r.value === "number" && isFinite(r.value));
+      return { ok: rows.length > 0, rows };
+    } catch (_err) {
+      return { ok: false, rows: [] };
+    }
+  }
 
+  /* ------------------------------------------------------------------ */
+  /* Derived per-symbol state                                            */
+  /* ------------------------------------------------------------------ */
+
+  function buildSymbolState(watchlist, signals, portfolio) {
+    const bySymbol = {};
+    for (const entry of watchlist) {
+      bySymbol[entry.symbol] = {
+        symbol: entry.symbol,
+        category: entry.category || "other",
+        history: [],
+        last: null,
+        error: false,
+      };
+    }
+    for (const s of signals) {
+      if (!s || !s.symbol) continue;
+      if (!bySymbol[s.symbol]) {
+        bySymbol[s.symbol] = { symbol: s.symbol, category: "other", history: [], last: null, error: false };
+      }
+      bySymbol[s.symbol].history.push(s);
+    }
+    for (const symbol of Object.keys(bySymbol)) {
+      const entry = bySymbol[symbol];
+      entry.history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      entry.last = entry.history.length ? entry.history[entry.history.length - 1] : null;
+      entry.error = !entry.last;
+    }
+    const openPositions = (portfolio && portfolio.open_positions) || {};
+    for (const symbol of Object.keys(openPositions)) {
+      if (!bySymbol[symbol]) {
+        bySymbol[symbol] = { symbol, category: openPositions[symbol].category || "other", history: [], last: null, error: true };
+      }
+    }
+    return bySymbol;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: price grid                                               */
+  /* ------------------------------------------------------------------ */
+
+  function renderPriceGrid(container, symbolState, watchlist) {
+    const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
+    if (!symbols.length) { empty(container, "veri yok"); return; }
+
+    container.innerHTML = symbols
+      .map((symbol) => {
+        const entry = symbolState[symbol];
+        const hist = (entry && entry.history) || [];
+        const last = hist[hist.length - 1];
+        const prev = hist[hist.length - 2];
+        const price = last ? last.price : null;
+        const pct = last && prev && prev.price ? price / prev.price - 1 : null;
+        const cls = pct == null ? "neutral" : pct > 0 ? "up" : pct < 0 ? "down" : "neutral";
+        return `<div class="price-cell">
+          <div class="sym">${symbol}</div>
+          <div class="px">${price != null ? fmtNum(price, 2) : "—"}</div>
+          <div class="pct ${cls}">${pct != null ? fmtPct(pct) : "—"}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: sector trends (narrow) + sector columns (mobile)         */
+  /* ------------------------------------------------------------------ */
+
+  function categoryChange(symbolState, cats) {
+    const symbols = Object.values(symbolState).filter((e) => cats.includes(e.category));
+    const pcts = [];
+    const points = [];
+    for (const entry of symbols) {
+      const hist = entry.history;
+      const last = hist[hist.length - 1];
+      const prev = hist[hist.length - 2];
+      if (last && prev && prev.price) pcts.push(last.price / prev.price - 1);
+      if (last) points.push(last.price);
+    }
+    const avg = pcts.length ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null;
+    return { avg, symbols, points };
+  }
+
+  function sparkSvg(points) {
+    if (!points || points.length < 2) return "";
+    const w = 100, h = 18;
+    const min = Math.min(...points), max = Math.max(...points);
+    const span = max - min || 1;
+    const step = w / (points.length - 1);
+    const path = points.map((p, i) => `${i * step},${h - ((p - min) / span) * h}`).join(" ");
+    const color = points[points.length - 1] >= points[0] ? "#00e57a" : "#ff4d4d";
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="1.5" />
+    </svg>`;
+  }
+
+  function renderSector(container, symbolState) {
+    const rows = CAT_GROUPS.map((group) => {
+      const { avg, points } = categoryChange(symbolState, group.cats);
+      const cls = avg == null ? "neutral" : avg > 0 ? "up" : avg < 0 ? "down" : "neutral";
+      return `<div class="sector-row">
+        <span>${group.label}</span>
+        ${sparkSvg(points)}
+        <span class="${cls}">${avg != null ? fmtPct(avg) : "—"}</span>
+      </div>`;
+    });
+    if (!rows.length) { empty(container); return; }
+    container.innerHTML = rows.join("");
+  }
+
+  function renderSectorColumns(container, symbolState) {
+    const cols = CAT_GROUPS.map((group) => {
+      const symbols = Object.values(symbolState).filter((e) => group.cats.includes(e.category));
+      const items = symbols.length
+        ? symbols
+            .map((entry) => {
+              const hist = entry.history;
+              const last = hist[hist.length - 1];
+              const prev = hist[hist.length - 2];
+              const pct = last && prev && prev.price ? last.price / prev.price - 1 : null;
+              const cls = pct == null ? "neutral" : pct > 0 ? "up" : pct < 0 ? "down" : "neutral";
+              return `<div class="item"><span>${entry.symbol}</span><span class="${cls}">${pct != null ? fmtPct(pct) : "—"}</span></div>`;
+            })
+            .join("")
+        : `<div class="item muted">veri yok</div>`;
+      return `<div class="col"><h3>${group.label}</h3>${items}</div>`;
+    });
+    container.innerHTML = cols.join("");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: decision sphere                                          */
+  /* ------------------------------------------------------------------ */
+
+  let selectedSymbol = null;
+  let onSymbolSelect = () => {};
+
+  function renderSphere(container, symbolState, watchlist, portfolio) {
+    const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
+    if (!symbols.length) { empty(container, "watchlist.json yok"); return; }
+
+    const size = 240;
+    const cx = size / 2, cy = size / 2;
+    const rx = 95, ry = 40;
+    const openPositions = (portfolio && portfolio.open_positions) || {};
+    const total = symbols.length;
+
+    const nodes = symbols.map((symbol, i) => {
+      const angle = ((i / total) * 360 * Math.PI) / 180;
+      const x = cx + rx * Math.cos(angle);
+      const y = cy + ry * Math.sin(angle) * (1 + 0.5 * Math.sin(angle * 2));
+      const entry = symbolState[symbol] || { last: null, error: true };
+      const decision = entry.last ? entry.last.decision : null;
+      const color = decisionColor(decision, entry.error);
+      const big = !!openPositions[symbol];
+      return { symbol, x, y, color, r: big ? 8 : 5 };
+    });
+
+    const links = nodes.map((n, i) => {
+      const next = nodes[(i + 1) % nodes.length];
+      return `<line class="sphere-link" x1="${n.x}" y1="${n.y}" x2="${next.x}" y2="${next.y}" />`;
+    });
+
+    const svg = `<svg viewBox="0 0 ${size} ${size}">
+      <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" />
+      <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx * 0.65}" ry="${ry * 1.6}" />
+      <ellipse class="sphere-ring" cx="${cx}" cy="${cy}" rx="${rx * 1.15}" ry="${ry * 0.55}" />
+      ${links.join("")}
+      ${nodes
+        .map(
+          (n) =>
+            `<circle class="sphere-node" data-symbol="${n.symbol}" cx="${n.x}" cy="${n.y}" r="${n.r}" fill="${n.color}" />
+             <text class="sphere-label" x="${n.x}" y="${n.y - n.r - 3}">${n.symbol}</text>`
+        )
+        .join("")}
+      <text class="sphere-core" x="${cx}" y="${cy - 4}">AI</text>
+      <text class="sphere-core" x="${cx}" y="${cy + 7}">KARAR MOTORU</text>
+    </svg>`;
+
+    container.innerHTML = svg;
+    container.querySelectorAll(".sphere-node").forEach((node) => {
+      node.addEventListener("click", () => onSymbolSelect(node.getAttribute("data-symbol")));
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: signal engine panel                                      */
+  /* ------------------------------------------------------------------ */
+
+  function latestOverallSignal(signals) {
+    const decisive = signals.filter((s) => s.decision === "BUY" || s.decision === "SELL");
+    if (!decisive.length) return null;
+    return decisive.reduce((a, b) => (new Date(a.timestamp) > new Date(b.timestamp) ? a : b));
+  }
+
+  function renderSignalPanel(container, signals, portfolio) {
+    const last = latestOverallSignal(signals);
+    if (!last) { container.innerHTML = `<div class="empty">sinyal bekleniyor</div>`; return; }
+
+    const cls = last.decision === "BUY" ? "al" : last.decision === "SELL" ? "sat" : "bekle";
+    const reasons = Array.isArray(last.triggering_rule) ? last.triggering_rule : [];
+    const ruleCount = reasons.length;
+
+    const ind = last.indicators || {};
+    const ema20 = ind.ema_20, ema50 = ind.ema_50, atr = ind.atr, price = last.price;
+
+    const trendPct = ema20 != null && ema50 != null && ema50 !== 0 ? (ema20 - ema50) / ema50 : null;
+    const volPct = atr != null && price ? atr / price : null;
+
+    const openPositions = (portfolio && portfolio.open_positions) || {};
+    const pos = openPositions[last.symbol];
+    const riskPct = pos && pos.entry_price ? Math.abs(pos.entry_price - pos.stop_price) / pos.entry_price : null;
+
+    function bar(label, pct, digits = 2) {
+      const known = pct != null && isFinite(pct);
+      const width = known ? Math.min(100, Math.abs(pct) * 100 * 4) : 0;
+      return `<div class="bar-row">
+        <div class="bar-label"><span>${label}</span><span>${known ? fmtPct(pct, digits) : "veri yok"}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div>
+      </div>`;
+    }
+
+    container.innerHTML = `
+      <span class="signal-badge ${cls}">${decisionLabel(last.decision)}</span>
+      <div class="rule-count">${last.symbol} — ${ruleCount}/3 kural — ${fmtDate(last.timestamp)}</div>
+      ${bar("Trend (EMA20/EMA50)", trendPct)}
+      ${bar("Volatilite (ATR/fiyat)", volPct)}
+      ${bar("Hacim", null)}
+      ${bar("Risk/Ödül", riskPct)}
+    `;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: candle-ish chart + indicators                            */
+  /* ------------------------------------------------------------------ */
+
+  function renderChart(symbol, symbolState) {
+    document.getElementById("chart-symbol").textContent = symbol || "—";
+    const svg = document.getElementById("candle-chart");
+    const entry = symbol ? symbolState[symbol] : null;
+    const hist = entry ? entry.history.filter((h) => typeof h.price === "number") : [];
+
+    if (!hist.length) {
+      svg.innerHTML = `<text x="150" y="80" fill="#7c7566" font-size="11" text-anchor="middle">veri yok</text>`;
+    } else {
+      const closes = hist.map((h) => h.price);
+      const min = Math.min(...closes), max = Math.max(...closes);
+      const span = max - min || 1;
+      const w = 300, h = 160, pad = 10;
+      const n = closes.length;
+      const step = (w - pad * 2) / Math.max(n, 1);
+      const y = (v) => pad + (1 - (v - min) / span) * (h - pad * 2);
+
+      let bars = "";
+      for (let i = 0; i < n; i++) {
+        const open = i === 0 ? closes[0] : closes[i - 1];
+        const close = closes[i];
+        const x = pad + i * step + step / 2;
+        const top = y(Math.max(open, close));
+        const bottom = y(Math.min(open, close));
+        const color = close >= open ? "#00e57a" : "#ff4d4d";
+        const hi = y(Math.max(open, close));
+        const lo = y(Math.min(open, close));
+        bars += `<line x1="${x}" y1="${hi}" x2="${x}" y2="${lo}" stroke="${color}" stroke-width="1" />`;
+        bars += `<rect x="${x - step * 0.3}" y="${Math.min(top, bottom)}" width="${step * 0.6}" height="${Math.max(1, Math.abs(bottom - top))}" fill="${color}" />`;
+      }
+      svg.innerHTML = bars;
+    }
+
+    const last = hist[hist.length - 1];
+    const ind = (last && last.indicators) || {};
+    const stop = ind.atr != null && last ? last.price - 2 * ind.atr : null;
+
+    const rows = [
+      ["RSI", ind.rsi != null ? fmtNum(ind.rsi, 2) : "—"],
+      ["EMA20", ind.ema_20 != null ? fmtNum(ind.ema_20, 2) : "—"],
+      ["EMA50", ind.ema_50 != null ? fmtNum(ind.ema_50, 2) : "—"],
+      ["ATR", ind.atr != null ? fmtNum(ind.atr, 2) : "—"],
+      ["Stop", stop != null ? fmtNum(stop, 2) : "—"],
+      ["Hacim Oranı", "veri yok"],
+    ]
+      .map(([label, value]) => `<div class="ind-row"><span>${label}</span><span>${value}</span></div>`)
+      .join("");
+
+    document.getElementById("indicators-inline-body").innerHTML = rows;
+    document.getElementById("indicators-body").innerHTML = rows;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: heatmap                                                  */
+  /* ------------------------------------------------------------------ */
+
+  function renderHeatmap(container, symbolState, watchlist) {
+    const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
+    if (!symbols.length) { empty(container, "veri yok"); return; }
+
+    container.innerHTML = symbols
+      .map((symbol) => {
+        const entry = symbolState[symbol] || { last: null, error: true };
+        const decision = entry.last ? entry.last.decision : null;
+        const color = decisionColor(decision, entry.error);
+        const bg = decision ? color + "22" : "#2b200733";
+        return `<div class="heat-cell" data-symbol="${symbol}" style="background:${bg};color:${color};border-color:${color}55">${symbol}</div>`;
+      })
+      .join("");
+
+    container.querySelectorAll(".heat-cell").forEach((cell) => {
+      cell.addEventListener("click", () => onSymbolSelect(cell.getAttribute("data-symbol")));
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: last signals + portfolio ring                            */
+  /* ------------------------------------------------------------------ */
+
+  function renderLastSignals(container, signals) {
+    if (!signals.length) { empty(container, "henüz sinyal yok"); return; }
+    const rows = [...signals]
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 15)
+      .map((s) => `<tr>
+        <td>${fmtDate(s.timestamp)}</td>
+        <td>${s.symbol || "—"}</td>
+        <td><span class="pill ${pillClass(s.decision)}">${decisionLabel(s.decision)}</span></td>
+      </tr>`)
+      .join("");
+    container.innerHTML = `<table><thead><tr><th>Tarih</th><th>Sembol</th><th>Karar</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function renderPortfolioRing(container, portfolio) {
+    if (!portfolio) { empty(container); return; }
+    const positionsValue = Object.values(portfolio.open_positions || {}).reduce(
+      (sum, p) => sum + p.quantity * p.entry_price,
+      0
+    );
+    const cash = portfolio.cash || 0;
+    const total = cash + positionsValue;
+    if (!total) { empty(container); return; }
+
+    const cashFrac = cash / total;
+    const r = 45, cx = 60, cy = 60;
+    const circumference = 2 * Math.PI * r;
+    const cashLen = circumference * cashFrac;
+
+    container.innerHTML = `
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#7c7566" stroke-width="14" />
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f5c34b" stroke-width="14"
+          stroke-dasharray="${cashLen} ${circumference - cashLen}" transform="rotate(-90 ${cx} ${cy})" />
+        <text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="#e6e2d5" font-size="12">${fmtPct(cashFrac, 0)}</text>
+      </svg>
+      <div class="ring-legend">
+        <span class="leg-cash">Nakit</span>
+        <span class="leg-pos">Pozisyon</span>
+      </div>
+    `;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: equity curve                                             */
+  /* ------------------------------------------------------------------ */
+
+  function buildEquitySeries(portfolio, equityRows) {
+    if (equityRows && equityRows.length) {
+      return [...equityRows].sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+    if (!portfolio || typeof portfolio.starting_capital !== "number") return [];
+
+    const trades = [...(portfolio.closed_trades || [])].sort(
+      (a, b) => new Date(a.exit_date) - new Date(b.exit_date)
+    );
+    const points = [{ date: trades[0]?.entry_date || new Date().toISOString(), value: portfolio.starting_capital }];
+    let running = portfolio.starting_capital;
+    for (const trade of trades) {
+      running += trade.pnl;
+      points.push({ date: trade.exit_date, value: running });
+    }
+    return points;
+  }
+
+  function renderEquity(container, points) {
+    if (!points.length) { empty(container, "veri yok"); return; }
+
+    const w = 600, h = 180, pad = { top: 10, right: 10, bottom: 20, left: 50 };
+    const values = points.map((p) => p.value);
+    const times = points.map((p) => new Date(p.date).getTime());
+    let minV = Math.min(...values), maxV = Math.max(...values);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    const minT = Math.min(...times), maxT = Math.max(...times);
+    const spanT = maxT - minT || 1;
+
+    const x = (t) => pad.left + ((t - minT) / spanT) * (w - pad.left - pad.right);
+    const y = (v) => pad.top + (1 - (v - minV) / (maxV - minV)) * (h - pad.top - pad.bottom);
+
+    let grid = "";
+    for (let i = 0; i <= 4; i++) {
+      const v = minV + ((maxV - minV) * i) / 4;
+      const yy = y(v);
+      grid += `<line x1="${pad.left}" y1="${yy}" x2="${w - pad.right}" y2="${yy}" stroke="#1f1a0a" stroke-width="1" />`;
+      grid += `<text x="${pad.left - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="#7c7566">${fmtNum(v, 0)}</text>`;
+    }
+
+    const path = points.map((p) => `${x(new Date(p.date).getTime())},${y(p.value)}`).join(" ");
+    const lastPoint = points[points.length - 1];
+    const color = points[points.length - 1].value >= points[0].value ? "#00e57a" : "#ff4d4d";
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      ${grid}
+      <polyline points="${path}" fill="none" stroke="${color}" stroke-width="2" />
+      <circle cx="${x(new Date(lastPoint.date).getTime())}" cy="${y(lastPoint.value)}" r="4" fill="${color}">
+        ${reduceMotion ? "" : '<animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />'}
+      </circle>
+    </svg>`;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rendering: positions, risk, system, metrics                         */
+  /* ------------------------------------------------------------------ */
+
+  function renderPositions(container, portfolio, symbolState) {
+    const positions = Object.values((portfolio && portfolio.open_positions) || {});
+    if (!positions.length) { empty(container, "açık pozisyon yok"); return; }
+    const rows = positions
+      .map((p) => {
+        const hist = (symbolState[p.symbol] && symbolState[p.symbol].history) || [];
+        const current = hist.length ? hist[hist.length - 1].price : p.entry_price;
+        const pct = p.entry_price ? current / p.entry_price - 1 : 0;
+        const cls = pct > 0 ? "up" : pct < 0 ? "down" : "neutral";
+        return `<tr><td>${p.symbol}</td><td>${fmtNum(p.entry_price, 2)}</td><td>${fmtNum(current, 2)}</td><td class="${cls}">${fmtPct(pct)}</td></tr>`;
+      })
+      .join("");
+    container.innerHTML = `<table><thead><tr><th>Sembol</th><th>Giriş</th><th>Güncel</th><th>%</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function renderRisk(container, portfolio) {
+    if (!portfolio) { empty(container); return; }
+    const peak = portfolio.peak_equity || 0;
+    const positionsValue = Object.values(portfolio.open_positions || {}).reduce(
+      (sum, p) => sum + p.quantity * p.entry_price,
+      0
+    );
+    const equity = (portfolio.cash || 0) + positionsValue;
+    const dd = peak > 0 ? (peak - equity) / peak : null;
+    const openCount = Object.keys(portfolio.open_positions || {}).length;
+    container.innerHTML = `
+      <div class="health-row"><span>Drawdown</span><span class="${dd > 0.001 ? 'down' : 'neutral'}">${dd != null ? fmtPct(dd) : "—"}</span></div>
+      <div class="health-row"><span>Tepe Değer</span><span>${fmtNum(peak)}</span></div>
+      <div class="health-row"><span>Açık Pozisyon</span><span>${openCount}</span></div>
+    `;
+  }
+
+  function renderSystem(container, health) {
+    if (!health.ok || !health.data || !Array.isArray(health.data.modules)) {
+      empty(container, "izleme yok");
+      return;
+    }
+    const rows = health.data.modules
+      .map((m) => {
+        const dotClass = m.status === "ok" ? "ok" : m.status === "warn" ? "warn" : "err";
+        const codeText = m.code ? ` (${m.code})` : "";
+        return `<div class="health-row">
+          <div><span class="dot ${dotClass}"></span><span class="health-name">${m.name}</span></div>
+          <div class="health-detail">${m.detail || ""}${codeText}</div>
+        </div>`;
+      })
+      .join("");
+    container.innerHTML = rows;
+  }
+
+  function renderMetrics(container, portfolio, signals) {
+    const positions = Object.keys((portfolio && portfolio.open_positions) || {}).length;
+    const closedTrades = (portfolio && portfolio.closed_trades) || [];
+    const pnl = closedTrades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = closedTrades.filter((t) => t.pnl > 0).length;
+    const hitRate = closedTrades.length ? wins / closedTrades.length : null;
+    const peak = (portfolio && portfolio.peak_equity) || 0;
+    const positionsValue = Object.values((portfolio && portfolio.open_positions) || {}).reduce(
+      (sum, p) => sum + p.quantity * p.entry_price,
+      0
+    );
+    const equity = portfolio ? (portfolio.cash || 0) + positionsValue : null;
+    const dd = portfolio && peak > 0 && equity != null ? (peak - equity) / peak : null;
+
+    const cells = [
+      ["Pozisyon", positions],
+      ["K/Z", portfolio ? fmtNum(pnl) : "—"],
+      ["Risk (DD)", dd != null ? fmtPct(dd) : "—"],
+      ["İsabet", hitRate != null ? fmtPct(hitRate, 1) : "—"],
+      ["Sinyal Sayısı", signals.length],
+    ];
+    container.innerHTML = cells
+      .map(([label, value]) => `<div class="m-cell"><div class="m-label">${label}</div><div class="m-value">${value}</div></div>`)
+      .join("");
+  }
+
+  function renderFooterSummary(portfolio, signals, health) {
+    const closedTrades = (portfolio && portfolio.closed_trades) || [];
+    const wins = closedTrades.filter((t) => t.pnl > 0).length;
+    const hitRate = closedTrades.length ? wins / closedTrades.length : null;
+    const cash = portfolio ? portfolio.cash : null;
+    const positionsValue = portfolio
+      ? Object.values(portfolio.open_positions || {}).reduce((sum, p) => sum + p.quantity * p.entry_price, 0)
+      : 0;
+    const equity = portfolio ? (portfolio.cash || 0) + positionsValue : null;
+    const cashRatio = equity ? cash / equity : null;
+    const lastRun = health.ok && health.data && health.data.timestamp ? fmtDate(health.data.timestamp) : "—";
+
+    const el = document.getElementById("footer-summary");
+    el.innerHTML = `
+      <span>İsabet: <b>${hitRate != null ? fmtPct(hitRate, 1) : "—"}</b></span>
+      <span>İşlem Sayısı: <b>${closedTrades.length}</b></span>
+      <span>Nakit Oranı: <b>${cashRatio != null ? fmtPct(cashRatio, 1) : "—"}</b></span>
+      <span>Kaynak: <b>TwelveData</b></span>
+      <span>Son Güncelleme: <b>${lastRun}</b></span>
+    `;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Tabs                                                                */
+  /* ------------------------------------------------------------------ */
+
+  function setupTabs() {
+    const buttons = document.querySelectorAll("#tabs button");
+    const app = document.getElementById("app");
+    const inactiveMsg = document.getElementById("tab-inactive-msg");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.getAttribute("data-tab");
+        if (tab === "borsa") {
+          app.style.display = "";
+          inactiveMsg.style.display = "none";
+        } else {
+          app.style.display = "none";
+          inactiveMsg.style.display = "block";
+        }
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Main refresh                                                        */
+  /* ------------------------------------------------------------------ */
+
+  async function refresh() {
+    const [watchlist, portfolioResult, signalsResult, health, equity] = await Promise.all([
+      loadWatchlist(),
+      loadPortfolio(),
+      loadSignals(),
+      loadHealth(),
+      loadEquity(),
+    ]);
+
+    const portfolio = portfolioResult.ok ? portfolioResult.data : null;
+    const signals = signalsResult.signals || [];
+    const symbolState = buildSymbolState(watchlist, signals, portfolio);
+
+    renderPriceGrid(document.getElementById("pricegrid-body"), symbolState, watchlist);
+    renderSector(document.getElementById("sector-body"), symbolState);
+    renderSectorColumns(document.getElementById("sectorcols-body"), symbolState);
+    renderSphere(document.getElementById("sphere-body"), symbolState, watchlist, portfolio);
+    renderSignalPanel(document.getElementById("signal-body"), signals, portfolio);
+    renderHeatmap(document.getElementById("heatmap-body"), symbolState, watchlist);
+    renderLastSignals(document.getElementById("lastsignals-body"), signals);
+    renderPortfolioRing(document.getElementById("portfolioring-body"), portfolio);
+    renderEquity(document.getElementById("equity-body"), buildEquitySeries(portfolio, equity.rows));
+    renderPositions(document.getElementById("positions-body"), portfolio, symbolState);
+    renderRisk(document.getElementById("risk-body"), portfolio);
+    renderSystem(document.getElementById("system-body"), health);
+    renderMetrics(document.getElementById("metrics-body"), portfolio, signals);
+    renderFooterSummary(portfolio, signals, health);
+
+    onSymbolSelect = (symbol) => {
+      selectedSymbol = symbol;
+      renderChart(symbol, symbolState);
+    };
+
+    if (!selectedSymbol) {
+      const withHistory = Object.values(symbolState).find((e) => e.history.length);
+      selectedSymbol = withHistory ? withHistory.symbol : (watchlist[0] && watchlist[0].symbol) || null;
+    }
+    renderChart(selectedSymbol, symbolState);
+
+    const lastRunTime = health.ok && health.data && health.data.timestamp ? fmtDate(health.data.timestamp) : fmtDate(new Date().toISOString());
+    document.getElementById("last-run").textContent = `Son çalıştırma: ${lastRunTime}`;
+  }
+
+  setupTabs();
   refresh();
 })();
 </script>
+</body>
+</html>

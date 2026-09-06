@@ -24,11 +24,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate docs/watchlist.json
+        run: |
+          python - <<'PY'
+          import json
+          from alsatbotu.config import WATCHLIST
+
+          data = [{"symbol": w["symbol"], "category": w["category"]} for w in WATCHLIST]
+          with open("docs/watchlist.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+
       - name: Sync portfolio data into docs/
         run: |
           mkdir -p docs/data
           [ -f data/portfolio.json ] && cp data/portfolio.json docs/data/portfolio.json || true
           [ -f data/signals.jsonl ] && cp data/signals.jsonl docs/data/signals.jsonl || true
+          [ -f data/health.json ] && cp data/health.json docs/data/health.json || true
+          [ -f data/equity.jsonl ] && cp data/equity.jsonl docs/data/equity.jsonl || true
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

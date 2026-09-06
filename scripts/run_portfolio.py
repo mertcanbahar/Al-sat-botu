@@ -23,26 +23,32 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from alsatbotu.config import WATCHLIST
+from alsatbotu.config import DATA_DIR, WATCHLIST
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
 from alsatbotu.rules import Decision, Signal, evaluate
 from engine.risk import evaluate_buy
-from notify.telegram import send_message
+from notify.telegram import is_configured as telegram_is_configured, send_message
 from portfolio.ledger import last_decisions, log_signal
 from portfolio.state import close_position, load_state, open_position, save_state, update_peak_equity
 
 SIGNAL_LABELS = {Signal.BUY: "🟢 AL", Signal.SELL: "🔴 SAT"}
 
+HEALTH_PATH = DATA_DIR / "health.json"
+EQUITY_LEDGER_PATH = DATA_DIR / "equity.jsonl"
 
-def _notify_signal(symbol: str, decision: Decision, price: float, action: str) -> None:
+
+def _notify_signal(symbol: str, decision: Decision, price: float, action: str) -> bool:
     lines = [
         f"{SIGNAL_LABELS[decision.signal]} sinyali — {symbol}",
         f"Fiyat: {price:.4f}",
@@ -51,7 +57,83 @@ def _notify_signal(symbol: str, decision: Decision, price: float, action: str) -
         lines.append("Tetikleyen kural:")
         lines.extend(f"  • {reason}" for reason in decision.reasons)
     lines.append(f"İşlem: {action}")
-    send_message("\n".join(lines))
+    return send_message("\n".join(lines))
+
+
+def _module_status(ok_count: int, total: int) -> str:
+    if total <= 0 or ok_count >= total:
+        return "ok"
+    if ok_count > 0:
+        return "warn"
+    return "error"
+
+
+def _write_health(
+    path: Path,
+    total_symbols: int,
+    fetch_ok: int,
+    volume_ok: int,
+    signal_count: int,
+    open_positions: int,
+    telegram_attempts: int,
+    telegram_successes: int,
+) -> None:
+    fetch_status = _module_status(fetch_ok, total_symbols)
+    volume_status = _module_status(volume_ok, fetch_ok)
+
+    if not telegram_is_configured():
+        telegram_status, telegram_detail, telegram_code = "warn", "yapılandırılmadı", "W-TG"
+    elif telegram_attempts == 0:
+        telegram_status, telegram_detail, telegram_code = "ok", "bekleniyor", None
+    elif telegram_successes == telegram_attempts:
+        telegram_status, telegram_detail, telegram_code = "ok", "gonderildi", None
+    elif telegram_successes > 0:
+        telegram_status, telegram_detail, telegram_code = "warn", "kismen gonderildi", "W-TG"
+    else:
+        telegram_status, telegram_detail, telegram_code = "error", "gonderilemedi", "E-TG"
+
+    def _module(name: str, status: str, detail: str, code: Optional[str] = None) -> dict:
+        module = {"name": name, "status": status, "detail": detail}
+        if code:
+            module["code"] = code
+        return module
+
+    payload = {
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "modules": [
+            _module(
+                "twelvedata",
+                fetch_status,
+                f"{fetch_ok}/{total_symbols} sembol",
+                None if fetch_status == "ok" else ("W-FETCH" if fetch_status == "warn" else "E-FETCH"),
+            ),
+            _module("indikator", _module_status(fetch_ok, total_symbols), f"{fetch_ok} sembol"),
+            _module(
+                "hacim",
+                volume_status,
+                f"{volume_ok}/{fetch_ok}",
+                None if volume_status == "ok" else ("W-VOL" if volume_status == "warn" else "E-VOL"),
+            ),
+            _module("kural", "ok", f"{signal_count} sinyal"),
+            _module("portfoy", "ok", f"{open_positions} pozisyon"),
+            _module("telegram", telegram_status, telegram_detail, telegram_code),
+        ],
+    }
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp_path, path)
+
+
+def _append_equity(path: Path, equity: float, timestamp: Optional[str] = None) -> None:
+    record = {"date": timestamp or datetime.now(timezone.utc).isoformat(), "value": equity}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False))
+        f.write("\n")
 
 
 def run(days: int = 60) -> None:
@@ -60,6 +142,12 @@ def run(days: int = 60) -> None:
     previous_decisions = last_decisions()
     current_prices: dict[str, float] = {}
     latest_by_symbol: dict[str, dict] = {}
+
+    fetch_ok = 0
+    volume_ok = 0
+    signal_count = 0
+    telegram_attempts = 0
+    telegram_successes = 0
 
     for entry in WATCHLIST:
         symbol = entry["symbol"]
@@ -81,6 +169,12 @@ def run(days: int = 60) -> None:
         price = latest["close"]
         current_prices[symbol] = price
         latest_by_symbol[symbol] = latest
+
+        fetch_ok += 1
+        if latest.get("volume") is not None:
+            volume_ok += 1
+        if decision.signal != Signal.HOLD:
+            signal_count += 1
 
         log_signal(symbol, decision, price, latest)
         is_new_signal = previous_decisions.get(symbol) != decision.signal.value
@@ -110,7 +204,9 @@ def run(days: int = 60) -> None:
                 action = f"risk motoru reddetti — {'; '.join(risk_decision.reasons)}"
                 print(f"{symbol}: BUY signal rejected by risk engine: {'; '.join(risk_decision.reasons)}")
             if is_new_signal:
-                _notify_signal(symbol, decision, price, action)
+                telegram_attempts += 1
+                if _notify_signal(symbol, decision, price, action):
+                    telegram_successes += 1
         elif decision.signal == Signal.SELL:
             trade = close_position(
                 state,
@@ -129,12 +225,26 @@ def run(days: int = 60) -> None:
                 action = "açık pozisyon yok, işlem yapılmadı"
                 print(f"{symbol}: SELL signal, no open position")
             if is_new_signal:
-                _notify_signal(symbol, decision, price, action)
+                telegram_attempts += 1
+                if _notify_signal(symbol, decision, price, action):
+                    telegram_successes += 1
         else:
             print(f"{symbol}: HOLD @ {price:.4f}")
 
     equity = update_peak_equity(state, current_prices)
     save_state(state)
+
+    _write_health(
+        HEALTH_PATH,
+        total_symbols=len(WATCHLIST),
+        fetch_ok=fetch_ok,
+        volume_ok=volume_ok,
+        signal_count=signal_count,
+        open_positions=len(state.open_positions),
+        telegram_attempts=telegram_attempts,
+        telegram_successes=telegram_successes,
+    )
+    _append_equity(EQUITY_LEDGER_PATH, equity)
 
     print()
     print(f"Cash: {state.cash:.2f}")
