@@ -8,8 +8,8 @@ on:
         required: false
         default: "7"
   schedule:
-    # Weekdays 21:00 UTC
-    - cron: "0 21 * * 1-5"
+    # Weekdays 05:00 UTC
+    - cron: "0 5 * * 1-5"
 
 jobs:
   daily-report:
