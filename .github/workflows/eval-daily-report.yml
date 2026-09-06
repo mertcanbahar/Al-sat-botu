@@ -1,0 +1,27 @@
+name: Evaluation loop (daily report)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 23:00 Europe/Istanbul. Turkey has used UTC+3 year-round (no DST)
+    # since 2016, so this is a fixed 20:00 UTC.
+    - cron: "0 20 * * *"
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send daily evaluation report
+        run: python scripts/send_daily_report.py

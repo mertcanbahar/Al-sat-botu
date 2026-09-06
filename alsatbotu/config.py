@@ -56,3 +56,25 @@ WATCHLIST: list[dict] = [
 
 def category_for(symbol: str) -> str:
     return SYMBOL_CATEGORIES.get(symbol, "other")
+
+
+def asset_type_for(source: str) -> str:
+    return "crypto" if source == "coingecko" else "stock"
+
+
+# -- Evaluation / paper-trading loop ------------------------------------
+# See evaluation/ package: SQLite signal+outcome log, a paper portfolio run
+# alongside (not instead of) the JSON-based one above, a daily Telegram
+# report, and a weekly self-improvement loop over strategy parameters.
+
+EVAL_DB_PATH = Path(os.environ.get("ALSATBOTU_EVAL_DB_PATH", DATA_DIR / "evaluation.db"))
+
+PAPER_STARTING_CAPITAL = float(os.environ.get("ALSATBOTU_PAPER_STARTING_CAPITAL", "10000"))
+PAPER_RISK_PER_TRADE_PCT = 0.01  # 1% of current equity notional per trade
+PAPER_COMMISSION_PCT = 0.0015    # 0.15% commission, charged on entry and exit
+PAPER_SLIPPAGE_PCT = 0.0005      # 0.05% slippage, charged on entry and exit
+PAPER_ATR_STOP_MULTIPLIER = 1.5
+PAPER_ATR_TARGET_MULTIPLIER = 2.5
+PAPER_MAX_TRADES_PER_DAY = 100
+
+OUTCOME_HORIZONS_HOURS = {"price_1h": 1, "price_24h": 24, "price_7d": 24 * 7}

@@ -1,0 +1,52 @@
+name: Evaluation loop (hourly)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Every hour
+    - cron: "0 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  eval-cycle:
+    runs-on: ubuntu-latest
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Log signals and drive the paper portfolio
+        run: python scripts/eval_cycle.py
+
+      - name: Fill due outcome prices (1h/24h/7d)
+        run: python scripts/fill_outcomes.py
+
+      - name: Commit and push evaluation database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/evaluation.db
+          if git diff --cached --quiet; then
+            echo "No evaluation database changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: update evaluation database"
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::Failed to push evaluation database after 5 attempts."
+          exit 1
