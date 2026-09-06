@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
-from alsatbotu.rules import Signal, evaluate
+from alsatbotu.signal import Signal, evaluate
 
 INDICATOR_KEYS = (
     "ema_20",

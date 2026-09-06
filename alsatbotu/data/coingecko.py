@@ -1,10 +1,9 @@
 """CoinGecko client for cryptocurrency OHLC data (no API key required)."""
 from __future__ import annotations
 
-import requests
-
-from . import config
+from .. import config
 from .cache import DiskCache
+from .retry import request_with_retry
 
 _cache = DiskCache()
 
@@ -17,12 +16,12 @@ def fetch_ohlc(coin_id: str, vs_currency: str = "usd", days: int = 30) -> list[l
         return cached
 
     url = f"{config.COINGECKO_BASE_URL}/coins/{coin_id}/ohlc"
-    response = requests.get(
+    response = request_with_retry(
+        "GET",
         url,
         params={"vs_currency": vs_currency, "days": days},
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
-    response.raise_for_status()
     data = response.json()
     _cache.set("coingecko_ohlc", key, data)
     return data
@@ -45,12 +44,12 @@ def fetch_total_volumes(coin_id: str, vs_currency: str = "usd", days: int = 30) 
         return cached
 
     url = f"{config.COINGECKO_BASE_URL}/coins/{coin_id}/market_chart"
-    response = requests.get(
+    response = request_with_retry(
+        "GET",
         url,
         params={"vs_currency": vs_currency, "days": days},
         timeout=config.REQUEST_TIMEOUT_SECONDS,
     )
-    response.raise_for_status()
     data = response.json().get("total_volumes", [])
     _cache.set("coingecko_total_volumes", key, data)
     return data
