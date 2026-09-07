@@ -1,0 +1,605 @@
+{
+  "generated_at": "2026-09-07T10:08:21.258496Z",
+  "synthetic": true,
+  "seeds": [
+    42,
+    43,
+    44,
+    45
+  ],
+  "years": 5,
+  "results": [
+    {
+      "label": "H%20 / mandal",
+      "policy": {
+        "halt_pct": 0.2,
+        "release_pct": null,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.06119492138405869,
+          "min": 0.021032124670612218,
+          "max": 0.11588541634563554
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.16246013489968442,
+          "min": -0.1672762597507798,
+          "max": -0.15872772102817034
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.22785521201512962,
+          "min": -0.2313475969359405,
+          "max": -0.21050967438359805
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 5.5,
+          "min": 3,
+          "max": 8
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 5.5,
+          "min": 3,
+          "max": 8
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_blocked_buy_signals": {
+          "median": 387.5,
+          "min": 266,
+          "max": 733
+        },
+        "total_trades": {
+          "median": 495.0,
+          "min": 458,
+          "max": 505
+        },
+        "mean_halt_days_pct": {
+          "median": 0.06841666666666667,
+          "min": 0.052375000000000005,
+          "max": 0.135375
+        }
+      }
+    },
+    {
+      "label": "H%20 \u2192 R%10 / reset 60g\u00d70.5",
+      "policy": {
+        "halt_pct": 0.2,
+        "release_pct": 0.1,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.07317816440908531,
+          "min": 0.03763522322442636,
+          "max": 0.13296122111079756
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.16762903080366826,
+          "min": -0.17547674479082648,
+          "max": -0.16105522641308884
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.26797779470072575,
+          "min": -0.30290311125388986,
+          "max": -0.2531011773917382
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 0.0,
+          "min": 0,
+          "max": 1
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 5.5,
+          "min": 3,
+          "max": 9
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 5.0,
+          "min": 3,
+          "max": 9
+        },
+        "total_blocked_buy_signals": {
+          "median": 36.0,
+          "min": 16,
+          "max": 58
+        },
+        "total_trades": {
+          "median": 522.5,
+          "min": 510,
+          "max": 534
+        },
+        "mean_halt_days_pct": {
+          "median": 0.013729166666666667,
+          "min": 0.0075000000000000015,
+          "max": 0.0225
+        }
+      }
+    },
+    {
+      "label": "H%25 / mandal",
+      "policy": {
+        "halt_pct": 0.25,
+        "release_pct": null,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.06465798155430835,
+          "min": 0.031748525220367974,
+          "max": 0.13449925625199666
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.16966072483344963,
+          "min": -0.17241481618767665,
+          "max": -0.16164318555046311
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.2535101867272766,
+          "min": -0.26717949122295626,
+          "max": -0.25290325245294915
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 1.0,
+          "min": 1,
+          "max": 3
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 1.0,
+          "min": 1,
+          "max": 3
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_blocked_buy_signals": {
+          "median": 45.5,
+          "min": 1,
+          "max": 256
+        },
+        "total_trades": {
+          "median": 513.0,
+          "min": 510,
+          "max": 533
+        },
+        "mean_halt_days_pct": {
+          "median": 0.009895833333333333,
+          "min": 0.0009583333333333333,
+          "max": 0.044458333333333336
+        }
+      }
+    },
+    {
+      "label": "H%25 \u2192 R%10 / reset 60g\u00d70.5",
+      "policy": {
+        "halt_pct": 0.25,
+        "release_pct": 0.1,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.0717229751196411,
+          "min": 0.033065377508258775,
+          "max": 0.13449925625199666
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.17057819592826456,
+          "min": -0.17514292534208237,
+          "max": -0.16164318555046311
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.2780003278614059,
+          "min": -0.3076970454895348,
+          "max": -0.25290325245294915
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 0.0,
+          "min": 0,
+          "max": 1
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 1.0,
+          "min": 1,
+          "max": 3
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 1.0,
+          "min": 0,
+          "max": 3
+        },
+        "total_blocked_buy_signals": {
+          "median": 0.5,
+          "min": 0,
+          "max": 29
+        },
+        "total_trades": {
+          "median": 527.0,
+          "min": 515,
+          "max": 533
+        },
+        "mean_halt_days_pct": {
+          "median": 0.0025,
+          "min": 0.0009583333333333333,
+          "max": 0.0075000000000000015
+        }
+      }
+    },
+    {
+      "label": "H%30 / mandal",
+      "policy": {
+        "halt_pct": 0.3,
+        "release_pct": null,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.07154116851412329,
+          "min": 0.033065377508258775,
+          "max": 0.13456417842825363
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.17050317545774163,
+          "min": -0.17514292534208237,
+          "max": -0.16164318555046311
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.27139512642421965,
+          "min": -0.3076970454895348,
+          "max": -0.25290325245294915
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 0.0,
+          "min": 0,
+          "max": 1
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 0.0,
+          "min": 0,
+          "max": 1
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_blocked_buy_signals": {
+          "median": 0.0,
+          "min": 0,
+          "max": 11
+        },
+        "total_trades": {
+          "median": 527.5,
+          "min": 514,
+          "max": 534
+        },
+        "mean_halt_days_pct": {
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.003208333333333333
+        }
+      }
+    },
+    {
+      "label": "H%30 \u2192 R%10 / reset 60g\u00d70.5",
+      "policy": {
+        "halt_pct": 0.3,
+        "release_pct": 0.1,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.07161364754686816,
+          "min": 0.033065377508258775,
+          "max": 0.13456417842825363
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.17050317545774163,
+          "min": -0.17514292534208237,
+          "max": -0.16164318555046311
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.27139512642421965,
+          "min": -0.3076970454895348,
+          "max": -0.25290325245294915
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 0.0,
+          "min": 0,
+          "max": 1
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 0.0,
+          "min": 0,
+          "max": 1
+        },
+        "total_blocked_buy_signals": {
+          "median": 0.0,
+          "min": 0,
+          "max": 2
+        },
+        "total_trades": {
+          "median": 527.5,
+          "min": 514,
+          "max": 534
+        },
+        "mean_halt_days_pct": {
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0025
+        }
+      }
+    },
+    {
+      "label": "H%35 / mandal",
+      "policy": {
+        "halt_pct": 0.35,
+        "release_pct": null,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.07212631799797842,
+          "min": 0.033065377508258775,
+          "max": 0.13456417842825363
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.17050317545774163,
+          "min": -0.17514292534208237,
+          "max": -0.16164318555046311
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.27139512642421965,
+          "min": -0.3076970454895348,
+          "max": -0.25290325245294915
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_blocked_buy_signals": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_trades": {
+          "median": 527.5,
+          "min": 515,
+          "max": 534
+        },
+        "mean_halt_days_pct": {
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        }
+      }
+    },
+    {
+      "label": "H%35 \u2192 R%10 / reset 60g\u00d70.5",
+      "policy": {
+        "halt_pct": 0.35,
+        "release_pct": 0.1,
+        "min_halt_marks": 10,
+        "reset_after_marks": 60,
+        "reset_fraction": 0.5,
+        "max_resets": 2,
+        "hard_floor_pct": 0.5
+      },
+      "isolated": {
+        "aggregate_total_return_pct": {
+          "median": 0.07212631799797842,
+          "min": 0.033065377508258775,
+          "max": 0.13456417842825363
+        },
+        "mean_max_drawdown_pct": {
+          "median": -0.17050317545774163,
+          "min": -0.17514292534208237,
+          "max": -0.16164318555046311
+        },
+        "worst_max_drawdown_pct": {
+          "median": -0.27139512642421965,
+          "min": -0.3076970454895348,
+          "max": -0.25290325245294915
+        },
+        "accounts": {
+          "median": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "accounts_locked_at_end": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "accounts_stopped": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_cycles": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_releases": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_resets": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_blocked_buy_signals": {
+          "median": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "total_trades": {
+          "median": 527.5,
+          "min": 515,
+          "max": 534
+        },
+        "mean_halt_days_pct": {
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        }
+      }
+    }
+  ]
+}

@@ -57,6 +57,7 @@ import random
 import statistics
 import sys
 import time
+import zlib
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -170,7 +171,10 @@ def generate_synthetic_data(symbols: Sequence[dict], years: int, seed: int = 42)
         price = rng.uniform(50, 400)
         rows = []
         d = start
-        sym_rng = random.Random(seed ^ hash(symbol) & 0xFFFFFFFF)
+        # NOT hash(): Python string hash'i süreç başına rastgelelenir
+        # (PYTHONHASHSEED), bu da "deterministik" veriyi süreçler arasında
+        # yeniden üretilemez hale getiriyordu. crc32 sabit.
+        sym_rng = random.Random(seed ^ zlib.crc32(symbol.encode("utf-8")))
         for _ in range(n):
             while d.weekday() >= 5:
                 d += timedelta(days=1)
