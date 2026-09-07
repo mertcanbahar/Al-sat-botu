@@ -2,10 +2,18 @@
 
 Uses EMA(20), EMA(50), RSI(14), ATR(14) and a 20-period volume average:
 
-AL (BUY)  -- all of: EMA20 > EMA50, RSI in [40, 65], last volume > 20-period
+AL (BUY)  -- all of: EMA20 > EMA50, RSI in [40, 75], last volume > 20-period
              volume average.
 SAT (SELL) -- any of: price below the ATR stop level, EMA20 < EMA50,
              RSI > 75.
+
+The BUY RSI band's upper bound matches the SELL RSI threshold exactly (both
+75) rather than stopping at 65: a lower BUY ceiling left a 65-75 "dead zone"
+where a stock deep in a strong uptrend had RSI too high to (re-)enter but
+not yet high enough to trigger the SELL rule -- the rule engine would just
+sit out the strongest part of the trend, unable to buy, until momentum
+finally faded. Aligning the two removes that gap without loosening the
+SELL side's overbought exit at all.
 
 The ATR stop level is a simple trailing stop computed from the *previous*
 bar: stop = prev_close - ATR_STOP_MULTIPLIER * prev_atr. Using the previous
@@ -21,7 +29,7 @@ from typing import Sequence
 from ..indicators import add_indicators
 
 RSI_BUY_MIN = 40
-RSI_BUY_MAX = 65
+RSI_BUY_MAX = 75
 RSI_SELL_MAX = 75
 ATR_STOP_MULTIPLIER = 2.0
 

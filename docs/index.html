@@ -339,9 +339,10 @@
   #chart-panel .chart-wrap { display: flex; gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
   #chart-panel svg { flex: 1 1 60%; min-width: 0; height: 160px; }
   #chart-panel .indicators-inline { flex: 0 0 38%; font-size: 0.75rem; }
-  #chart-panel .indicators-inline .ind-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--line); }
-
-  .indicators-inline .ind-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 0.75rem; }
+  /* Bare (no ancestor-class) selector: this markup is reused verbatim in
+     #indicators-body (the mobile-only "Teknik Göstergeler" panel), which
+     has neither the .indicators-inline class nor an ancestor with it. */
+  .ind-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 0.75rem; }
 
   /* Heatmap */
   #heatmap-panel .heat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }

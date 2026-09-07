@@ -12,7 +12,7 @@ holding period.
 
 With --diagnose, also counts -- bar by bar, without altering or
 re-implementing the rule engine's decision logic -- how often each AL
-condition (EMA20>EMA50, RSI in [40,65], volume>20d average) holds on its
+condition (EMA20>EMA50, RSI in [40,75], volume>20d average) holds on its
 own, in each pairwise combination, and all three together.
 
 Usage:

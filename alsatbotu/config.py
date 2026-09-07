@@ -61,8 +61,8 @@ def category_for(symbol: str) -> str:
     return SYMBOL_CATEGORIES.get(symbol, "other")
 
 
-def source_for(symbol: str) -> str:
-    return SYMBOL_SOURCES.get(symbol, "coingecko")
+def source_for(symbol: str, default: str = "coingecko") -> str:
+    return SYMBOL_SOURCES.get(symbol, default)
 
 
 def asset_type_for(source: str) -> str:
