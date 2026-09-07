@@ -30,7 +30,7 @@ STARTING_CAPITAL = float(os.environ.get("ALSATBOTU_STARTING_CAPITAL", "10000"))
 RISK_PER_TRADE_PCT = 0.02
 CATEGORY_EXPOSURE_LIMIT_PCT = 0.40
 MAX_OPEN_POSITIONS = 8
-MAX_DRAWDOWN_PCT = 0.20
+MAX_DRAWDOWN_PCT = float(os.environ.get("ALSATBOTU_MAX_DRAWDOWN_PCT", "0.20"))
 
 # Symbol -> category, used by the risk engine's category exposure cap.
 # "other" is the fallback category for any symbol not listed here.
