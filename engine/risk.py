@@ -94,6 +94,8 @@ def assess_halt(
         halt_since=state.halt_since,
         today=today,
         policy=policy,
+        halt_entry_drawdown=state.halt_entry_drawdown,
+        previously_below_floor=state.below_floor,
     )
 
 

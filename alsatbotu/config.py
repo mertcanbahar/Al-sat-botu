@@ -64,6 +64,22 @@ HALT_CAPACITY_HALT = float(os.environ.get("ALSATBOTU_HALT_CAPACITY_HALT", "0.00"
 # denemeye başlar.
 HALT_RECOVERY_DAYS = int(os.environ.get("ALSATBOTU_HALT_RECOVERY_DAYS", "14"))
 HALT_RECOVERY_CAPACITY = float(os.environ.get("ALSATBOTU_HALT_RECOVERY_CAPACITY", "0.25"))
+# Ağ yalnızca drawdown HALT'a girildiği günden beri derinleşmediyse açılır:
+# düşmeye devam eden bir piyasaya %25 boyutla geri binmeyi engeller.
+HALT_RECOVERY_REQUIRES_STABLE_DRAWDOWN = (
+    os.environ.get("ALSATBOTU_HALT_RECOVERY_REQUIRES_STABLE_DD", "1") not in ("0", "false", "False")
+)
+
+# Mutlak taban: bu drawdown'ın altında güvenlik ağı hiç açılmaz, kapasite
+# koşulsuz sıfırdır. Kendi histerezisi var (taban %30'da bağlar, %25'te
+# bırakır). Boş string = taban yok.
+def _optional_pct(name: str, default: str) -> float | None:
+    raw = os.environ.get(name, default).strip()
+    return float(raw) if raw else None
+
+
+HALT_FLOOR_PCT = _optional_pct("ALSATBOTU_HALT_FLOOR_PCT", "0.30")
+HALT_FLOOR_EXIT_PCT = _optional_pct("ALSATBOTU_HALT_FLOOR_EXIT_PCT", "0.25")
 
 DEFAULT_HALT_POLICY = HaltPolicy(
     enter_caution_pct=HALT_ENTER_CAUTION_PCT,
@@ -78,6 +94,9 @@ DEFAULT_HALT_POLICY = HaltPolicy(
     capacity_halt=HALT_CAPACITY_HALT,
     recovery_days=HALT_RECOVERY_DAYS,
     recovery_capacity=HALT_RECOVERY_CAPACITY,
+    recovery_requires_stable_drawdown=HALT_RECOVERY_REQUIRES_STABLE_DRAWDOWN,
+    floor_pct=HALT_FLOOR_PCT,
+    floor_exit_pct=HALT_FLOOR_EXIT_PCT,
 )
 
 # Geriye dönük uyumluluk: eski tek-eşikli mandalın adı, artık state

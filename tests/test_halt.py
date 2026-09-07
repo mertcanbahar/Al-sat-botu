@@ -182,8 +182,14 @@ def test_halt_is_not_terminal():
 # Time-based safety net
 # --------------------------------------------------------------------------
 
-def halt_after(days: int, drawdown: float = 0.30) -> HaltAssessment:
-    """Assess a book that entered HALT `days` calendar days ago."""
+def halt_after(days: int, drawdown: float = 0.25) -> HaltAssessment:
+    """Assess a book that entered HALT `days` calendar days ago.
+
+    The default drawdown sits in the working band (past HALT's 20% entry,
+    above the 30% floor) and is flat since entry, so what these tests measure
+    is the clock alone -- the floor and the stability condition are covered
+    by their own tests below.
+    """
     equity, hwm = 100.0 * (1 - drawdown), 100.0
     return assess(
         equity=equity,
@@ -192,6 +198,7 @@ def halt_after(days: int, drawdown: float = 0.30) -> HaltAssessment:
         halt_since=DAY,
         today=DAY + timedelta(days=days),
         policy=POLICY,
+        halt_entry_drawdown=drawdown,
     )
 
 
@@ -223,14 +230,18 @@ def test_the_safety_net_is_a_rung_below_defensive():
 def test_a_frozen_all_cash_account_still_reopens():
     # The exact case hysteresis alone cannot fix: an account that halted while
     # fully in cash has a flat equity curve, so its drawdown never improves
-    # and no exit threshold is ever met. Only the clock releases it.
-    equity, hwm = 70.0, 100.0
-    state, halt_since = HaltState.NORMAL, None
+    # and no exit threshold is ever met. Only the clock releases it -- and a
+    # flat curve is precisely what the stability condition allows, since the
+    # drawdown is not deepening.
+    equity, hwm = 75.0, 100.0  # 25%: past HALT, above the 30% floor
+    state, halt_since, entry_dd = HaltState.NORMAL, None, None
     unlocked_on = None
     for offset in range(30):
         today = DAY + timedelta(days=offset)
-        result = assess(equity, hwm, state, halt_since, today, POLICY)
-        state, halt_since = result.state, result.halt_since
+        result = assess(
+            equity, hwm, state, halt_since, today, POLICY, halt_entry_drawdown=entry_dd
+        )
+        state, halt_since, entry_dd = result.state, result.halt_since, result.halt_entry_drawdown
         assert result.state is HaltState.HALT  # drawdown never recovers
         if result.recovery_unlocked and unlocked_on is None:
             unlocked_on = offset
@@ -277,6 +288,149 @@ def test_a_halt_recorded_without_a_start_date_starts_its_clock_today():
 def test_dates_may_be_dates_or_iso_strings(today):
     result = assess(70.0, 100.0, HaltState.HALT, "2026-01-01", today, POLICY)
     assert result.halt_days == 0
+
+
+# --------------------------------------------------------------------------
+# Conditional safety net: the drawdown must have stopped deepening
+# --------------------------------------------------------------------------
+# Without this, the net reopens buying at 25% into a market that is still
+# falling. In the synthetic run that produced two portfolio drawdowns of
+# -34% against legacy's -22%.
+
+NO_CONDITION = HaltPolicy(recovery_requires_stable_drawdown=False, floor_pct=None, floor_exit_pct=None)
+NO_FLOOR = HaltPolicy(floor_pct=None, floor_exit_pct=None)
+
+
+def _hold_halt(series, policy, start_drawdown=0.21):
+    """Walk a drawdown series day by day, carrying state forward."""
+    state, since, entry_dd, floor = HaltState.NORMAL, None, None, False
+    result = None
+    for offset, drawdown in enumerate([start_drawdown] + list(series)):
+        result = assess(
+            equity=100.0 * (1 - drawdown),
+            high_water_mark=100.0,
+            previous_state=state,
+            halt_since=since,
+            today=DAY + timedelta(days=offset),
+            policy=policy,
+            halt_entry_drawdown=entry_dd,
+            previously_below_floor=floor,
+        )
+        state, since = result.state, result.halt_since
+        entry_dd, floor = result.halt_entry_drawdown, result.below_floor
+    return result
+
+
+def test_net_stays_shut_while_the_drawdown_keeps_deepening():
+    # Enters HALT at 21%, then sinks a little further every day for 20 days.
+    worsening = [0.21 + 0.002 * (i + 1) for i in range(20)]
+    result = _hold_halt(worsening, NO_FLOOR)
+
+    assert result.state is HaltState.HALT
+    assert result.halt_days >= POLICY.recovery_days
+    assert not result.recovery_unlocked
+    assert result.capacity == 0.0
+    assert "still deepening" in result.reason
+
+
+def test_net_opens_when_the_drawdown_has_stopped_deepening():
+    # Enters HALT at 21% and simply sits there: the market went sideways,
+    # which is the case the net was designed for.
+    result = _hold_halt([0.21] * 20, NO_FLOOR)
+
+    assert result.state is HaltState.HALT
+    assert result.recovery_unlocked
+    assert result.capacity == pytest.approx(0.25)
+
+
+def test_net_opens_once_a_deepened_drawdown_comes_back_to_its_entry_level():
+    # Sinks to 26% then recovers to 20.5% -- still HALT (exit is 15%), but no
+    # longer deeper than where it started, so the net is allowed to open.
+    series = [0.26] * 10 + [0.205] * 12
+    result = _hold_halt(series, NO_FLOOR)
+
+    assert result.state is HaltState.HALT
+    assert result.recovery_unlocked
+
+
+def test_without_the_condition_the_net_opens_into_a_falling_market():
+    # The v1 behaviour, kept switchable so the two can be compared.
+    worsening = [0.21 + 0.002 * (i + 1) for i in range(20)]
+    result = _hold_halt(worsening, NO_CONDITION)
+
+    assert result.recovery_unlocked
+    assert result.capacity == pytest.approx(0.25)
+
+
+# --------------------------------------------------------------------------
+# Absolute floor
+# --------------------------------------------------------------------------
+
+def test_floor_forces_zero_capacity_regardless_of_the_clock():
+    result = _hold_halt([0.32] * 40, POLICY)
+
+    assert result.below_floor
+    assert result.capacity == 0.0
+    assert not result.recovery_unlocked
+    assert result.halt_days >= POLICY.recovery_days  # clock ran out, net still shut
+    assert "absolute floor" in result.reason
+
+
+def test_floor_binds_even_when_the_drawdown_is_flat():
+    # Flat at 31% would satisfy the conditional net; the floor overrides it.
+    flat_below_floor = _hold_halt([0.31] * 30, POLICY, start_drawdown=0.31)
+    assert flat_below_floor.capacity == 0.0
+
+    # The same flat drawdown just above the floor does open the net.
+    flat_above_floor = _hold_halt([0.29] * 30, POLICY, start_drawdown=0.29)
+    assert flat_above_floor.capacity == pytest.approx(0.25)
+
+
+def test_floor_has_its_own_hysteresis():
+    # Binds at 30%, and 26-29% does not release it.
+    still_held = _hold_halt([0.32] * 5 + [0.27] * 5, POLICY)
+    assert still_held.below_floor
+
+    # 25% is the floor's exit threshold.
+    released = _hold_halt([0.32] * 5 + [0.25] * 5, POLICY)
+    assert not released.below_floor
+
+
+def test_leaving_the_floor_restores_the_ladder():
+    # Down to 32%, back to 14%: floor released and HALT released too.
+    result = _hold_halt([0.32] * 5 + [0.14] * 3, POLICY)
+    assert not result.below_floor
+    assert result.state is HaltState.DEFENSIVE
+    assert result.capacity == pytest.approx(0.50)
+
+
+def test_floor_can_be_switched_off():
+    result = _hold_halt([0.32] * 40, NO_FLOOR)
+    assert not result.below_floor
+    assert result.recovery_unlocked is False or result.capacity >= 0.0  # net gated by the condition
+
+
+def test_policy_rejects_a_floor_above_the_halt_threshold():
+    with pytest.raises(ValueError, match="backstop under the ladder"):
+        HaltPolicy(floor_pct=0.18, floor_exit_pct=0.16)
+
+
+def test_policy_rejects_a_floor_without_a_hysteresis_gap():
+    with pytest.raises(ValueError, match="hysteresis gap"):
+        HaltPolicy(floor_pct=0.30, floor_exit_pct=0.30)
+
+
+def test_policy_rejects_half_configured_floor():
+    with pytest.raises(ValueError, match="set or cleared together"):
+        HaltPolicy(floor_pct=0.30, floor_exit_pct=None)
+
+
+def test_live_default_policy_carries_the_floor_and_the_condition():
+    from alsatbotu.config import DEFAULT_HALT_POLICY
+
+    assert DEFAULT_HALT_POLICY.recovery_requires_stable_drawdown is True
+    assert DEFAULT_HALT_POLICY.floor_pct == pytest.approx(0.30)
+    assert DEFAULT_HALT_POLICY.floor_exit_pct == pytest.approx(0.25)
 
 
 # --------------------------------------------------------------------------

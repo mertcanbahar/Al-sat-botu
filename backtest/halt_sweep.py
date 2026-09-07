@@ -47,6 +47,7 @@ from typing import Optional, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.config import DEFAULT_HALT_POLICY  # noqa: E402
+from engine.halt import HaltPolicy  # noqa: E402
 from backtest.portfolio_backtest import (  # noqa: E402
     BACKTEST_SYMBOLS,
     STARTING_CAPITAL,
@@ -67,7 +68,31 @@ HALT_REASON_PREFIX = "Drawdown halt"
 # data.
 ARMS: dict[str, dict] = {
     "legacy %20": {"max_drawdown_pct": 0.20},
-    "kademeli": {"halt_policy": DEFAULT_HALT_POLICY},
+    # v1: koşulsuz ağ, taban yok. İlk ölçümde kilitlenmeyi çözdü ama iki
+    # tohumda portföy drawdown'ını -22%'den -35%'e taşıdı.
+    "kademeli v1": {
+        "halt_policy": HaltPolicy(
+            recovery_requires_stable_drawdown=False, floor_pct=None, floor_exit_pct=None
+        )
+    },
+    # v2: ağ yalnızca drawdown derinleşmiyorsa açılır. Taban yok, yani
+    # kuyruğu tek başına koşulun ne kadar kestiği burada görünür.
+    "+ koşullu ağ": {
+        "halt_policy": HaltPolicy(
+            recovery_requires_stable_drawdown=True, floor_pct=None, floor_exit_pct=None
+        )
+    },
+    # v3/v4: koşullu ağ + mutlak taban, iki eşikte.
+    "+ taban %30": {
+        "halt_policy": HaltPolicy(
+            recovery_requires_stable_drawdown=True, floor_pct=0.30, floor_exit_pct=0.25
+        )
+    },
+    "+ taban %25": {
+        "halt_policy": HaltPolicy(
+            recovery_requires_stable_drawdown=True, floor_pct=0.25, floor_exit_pct=0.20
+        )
+    },
 }
 
 

@@ -65,6 +65,10 @@ class PortfolioState:
     # neither key, load as a book that has never been in trouble.
     halt_state: str = HaltState.NORMAL.name
     halt_since: Optional[str] = None
+    # Drawdown when the current HALT episode began, and whether the book is
+    # past the absolute floor. Both feed the safety net's release conditions.
+    halt_entry_drawdown: Optional[float] = None
+    below_floor: bool = False
 
     @property
     def high_water_mark(self) -> float:
@@ -114,6 +118,8 @@ def load_state(path: Path = PORTFOLIO_STATE_PATH) -> PortfolioState:
         # Absent in every state file written before the state machine existed.
         halt_state=raw.get("halt_state", HaltState.NORMAL.name),
         halt_since=raw.get("halt_since"),
+        halt_entry_drawdown=raw.get("halt_entry_drawdown"),
+        below_floor=raw.get("below_floor", False),
     )
 
 
@@ -132,6 +138,8 @@ def save_state(state: PortfolioState, path: Path = PORTFOLIO_STATE_PATH) -> None
         "closed_trades": [asdict(trade) for trade in state.closed_trades],
         "halt_state": state.halt_state,
         "halt_since": state.halt_since,
+        "halt_entry_drawdown": state.halt_entry_drawdown,
+        "below_floor": state.below_floor,
     }
 
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -170,9 +178,13 @@ def update_halt_state(
         halt_since=state.halt_since,
         today=today,
         policy=policy or DEFAULT_HALT_POLICY,
+        halt_entry_drawdown=state.halt_entry_drawdown,
+        previously_below_floor=state.below_floor,
     )
     state.halt_state = assessment.state.name
     state.halt_since = assessment.halt_since_iso
+    state.halt_entry_drawdown = assessment.halt_entry_drawdown
+    state.below_floor = assessment.below_floor
     return assessment
 
 
