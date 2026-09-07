@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Optional
 
-from alsatbotu.rules import Decision
+from alsatbotu.signal import Decision
 from evaluation.strategy import StrategyParams, confidence_for
 
 PROMPT_VERSION = "rule-engine-v1"  # no LLM prompt yet; bumped if/when one is added

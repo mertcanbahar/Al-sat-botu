@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from typing import Optional, Sequence
 
 from alsatbotu.indicators import add_indicators
-from alsatbotu.rules import Decision, Signal
+from alsatbotu.signal import Decision, Signal
 from evaluation.db import connect
 
 BASELINE_VERSION = "v1"
@@ -49,7 +49,7 @@ BASELINE_PARAMS = StrategyParams(version=BASELINE_VERSION)
 
 
 def evaluate_versioned(rows: Sequence[dict], params: StrategyParams) -> Decision:
-    """Same shape as `alsatbotu.rules.evaluate`, but reads thresholds from `params`."""
+    """Same shape as `alsatbotu.signal.evaluate`, but reads thresholds from `params`."""
     if len(rows) < 2:
         raise ValueError("Need at least 2 rows of data to evaluate rules.")
 

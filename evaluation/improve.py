@@ -29,7 +29,7 @@ from typing import Optional, Sequence
 
 from alsatbotu.config import WATCHLIST, asset_type_for
 from alsatbotu.data import get_price_history
-from alsatbotu.rules import Signal
+from alsatbotu.signal import Signal
 from evaluation.db import connect
 from evaluation.paper_engine import buy_fill_price, commission_for, sell_fill_price
 from evaluation.strategy import StrategyParams, get_active_params, next_version_id, save_version

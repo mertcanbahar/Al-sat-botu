@@ -1,7 +1,7 @@
 """Evaluation & self-improvement loop for the rule engine.
 
 Everything here is additive: it reads the same price data, indicators, and
-rule engine (`alsatbotu.rules`) the live JSON-based portfolio
+rule engine (`alsatbotu.signal`) the live JSON-based portfolio
 (`portfolio/`, `engine/risk.py`, `scripts/run_portfolio.py`) already uses,
 and logs to its own SQLite database (`alsatbotu.config.EVAL_DB_PATH`)
 rather than touching `data/portfolio.json` or `data/signals.jsonl`.
