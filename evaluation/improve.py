@@ -8,15 +8,21 @@ Once a week:
      loss rate deviates most from the week's overall loss rate.
   3. Map that one pattern to exactly one strategy-parameter change (never
      more than one field of `StrategyParams`), producing a new version.
-  4. Backtest the old and new versions side by side over the *same*
-     historical window and compare one metric (aggregate net return).
-  5. Keep the new version only if it strictly beats the old one;
-     otherwise the old version stays active and the new one is recorded
-     as rejected.
+  4. Backtest the old and new versions side by side over the 30 days
+     *before* the 7-day window the hypothesis came from (VALIDATION_
+     WINDOW_DAYS, ending where HYPOTHESIS_WINDOW_DAYS begins) -- never the
+     same days the pattern was mined from, so a hypothesis can't validate
+     itself against the very data that produced it.
+  5. Save the new version as `status="candidate"`, active=0, regardless of
+     which side won that backtest, and post it to Telegram with inline
+     "Kabul et" / "Reddet" buttons. Nothing here activates it -- only a
+     human tapping "Kabul et" does (see
+     `scripts/process_telegram_approvals.py`). No reply, or "Reddet", and
+     the currently active version simply stays active.
 
 This never touches an LLM prompt (none exists yet -- see
 `evaluation/logger.py`'s PROMPT_VERSION) so "change the prompt" from the
-task spec is a no-op path here: every accepted change is a
+task spec is a no-op path here: every proposed change is a
 `StrategyParams` field.
 """
 from __future__ import annotations
@@ -34,7 +40,9 @@ from evaluation.db import connect
 from evaluation.paper_engine import buy_fill_price, commission_for, sell_fill_price
 from evaluation.strategy import StrategyParams, get_active_params, next_version_id, save_version
 
-BACKTEST_DAYS = 180
+HYPOTHESIS_WINDOW_DAYS = 7   # the losing trades a pattern is mined from
+VALIDATION_WINDOW_DAYS = 30  # the separate, earlier window a hypothesis is backtested on
+WARMUP_DAYS = 60             # extra history fetched so EMA50/RSI/ATR are warm at validation start
 MIN_SAMPLE = 3
 
 
@@ -164,8 +172,18 @@ class BacktestMetrics:
     hit_rate: Optional[float]
 
 
-def _run_versioned_backtest(rows: Sequence[dict], params: StrategyParams) -> tuple[float, int, int]:
+def _run_versioned_backtest(
+    rows: Sequence[dict], params: StrategyParams, window_start: datetime, window_end: datetime
+) -> tuple[float, int, int]:
     """Long-only, no-lookahead simulation of `evaluate_versioned` with paper-engine costs.
+
+    Runs over the *entire* `rows` series (so indicators are warmed up and
+    trades held across the window boundary behave normally), but only
+    counts a trade toward the returned metric if it was *entered* within
+    [window_start, window_end) -- rows before that are warmup-only, and
+    rows at/after `window_end` (the hypothesis's own 7-day window) are
+    deliberately excluded so validation never scores on the data the
+    hypothesis was mined from.
 
     Returns (total_return_pct, trade_count, win_count) for one symbol.
     """
@@ -180,31 +198,38 @@ def _run_versioned_backtest(rows: Sequence[dict], params: StrategyParams) -> tup
         window = rows[: i + 1]
         decision = evaluate_versioned(window, params)
         price = rows[i]["close"]
+        ts = rows[i]["timestamp"]
 
         if position is None and decision.signal == Signal.BUY:
             fill = buy_fill_price(price)
-            position = {"entry": fill}
+            position = {"entry": fill, "entry_time": ts}
         elif position is not None and decision.signal == Signal.SELL:
             fill = sell_fill_price(price)
             gross_return = fill / position["entry"] - 1.0
             fee_pct = commission_for(1.0) * 2  # entry + exit, as a fraction of notional
             net_return = gross_return - fee_pct
-            equity *= 1.0 + net_return
-            trade_count += 1
-            win_count += int(net_return > 0)
+            if window_start <= position["entry_time"] < window_end:
+                equity *= 1.0 + net_return
+                trade_count += 1
+                win_count += int(net_return > 0)
             position = None
 
     return equity - 1.0, trade_count, win_count
 
 
-def backtest_params(params: StrategyParams, price_data: dict[str, list[dict]]) -> BacktestMetrics:
+def backtest_params(
+    params: StrategyParams,
+    price_data: dict[str, list[dict]],
+    window_start: datetime,
+    window_end: datetime,
+) -> BacktestMetrics:
     returns = []
     total_trades = 0
     total_wins = 0
     for rows in price_data.values():
         if len(rows) < 60:
             continue
-        ret, trades, wins = _run_versioned_backtest(rows, params)
+        ret, trades, wins = _run_versioned_backtest(rows, params, window_start, window_end)
         returns.append(ret)
         total_trades += trades
         total_wins += wins
@@ -216,7 +241,7 @@ def backtest_params(params: StrategyParams, price_data: dict[str, list[dict]]) -
     )
 
 
-def _load_backtest_data(days: int = BACKTEST_DAYS) -> dict[str, list[dict]]:
+def _load_backtest_data(days: int) -> dict[str, list[dict]]:
     data: dict[str, list[dict]] = {}
     for entry in WATCHLIST:
         symbol = entry["symbol"]
@@ -228,34 +253,50 @@ def _load_backtest_data(days: int = BACKTEST_DAYS) -> dict[str, list[dict]]:
 
 
 def run_weekly_improvement(conn: Optional[sqlite3.Connection] = None, now: Optional[datetime] = None) -> dict:
-    """Run the full weekly loop once. Returns a summary dict for logging/printing."""
+    """Run the full weekly loop once. Returns a summary dict for logging/printing.
+
+    Never activates anything. On a found pattern, this always ends with a
+    new `status="candidate"` row in `strategy_versions` -- the caller
+    (`scripts/run_improvement_loop.py`) is responsible for posting it to
+    Telegram for a human to approve or reject.
+    """
     owns_conn = conn is None
     conn = conn or connect()
     now = now or datetime.now(timezone.utc)
     try:
-        since = now - timedelta(days=7)
-        losers, all_trades = _losing_and_all_trades(conn, since)
+        hypothesis_start = now - timedelta(days=HYPOTHESIS_WINDOW_DAYS)
+        losers, all_trades = _losing_and_all_trades(conn, hypothesis_start)
         pattern = find_pattern(losers, all_trades)
         if pattern is None:
             return {
                 "status": "no_pattern",
-                "reason": f"Not enough closed trades in the last 7 days ({len(all_trades)}) "
-                f"or no losses to analyze ({len(losers)}).",
+                "reason": f"Not enough closed trades in the last {HYPOTHESIS_WINDOW_DAYS} days "
+                f"({len(all_trades)}) or no losses to analyze ({len(losers)}).",
             }
 
         base = get_active_params(conn)
         new_version = next_version_id(conn)
         hypothesis, new_params = hypothesis_and_change(pattern, base, new_version)
 
-        price_data = _load_backtest_data()
+        # Validation window: the VALIDATION_WINDOW_DAYS immediately before
+        # the hypothesis window -- never overlapping it, so the backtest
+        # can't confirm a hypothesis against the same days that produced
+        # it (overfitting risk the user explicitly flagged).
+        validation_end = hypothesis_start
+        validation_start = validation_end - timedelta(days=VALIDATION_WINDOW_DAYS)
+        fetch_days = HYPOTHESIS_WINDOW_DAYS + VALIDATION_WINDOW_DAYS + WARMUP_DAYS
+
+        price_data = _load_backtest_data(fetch_days)
         if not price_data:
             return {"status": "no_data", "reason": "No historical price data available to backtest."}
 
-        old_metrics = backtest_params(base, price_data)
-        new_metrics = backtest_params(new_params, price_data)
+        old_metrics = backtest_params(base, price_data, validation_start, validation_end)
+        new_metrics = backtest_params(new_params, price_data, validation_start, validation_end)
 
-        accepted = new_metrics.total_return_pct > old_metrics.total_return_pct
+        new_wins_backtest = new_metrics.total_return_pct > old_metrics.total_return_pct
         backtest_summary = {
+            "window_start": validation_start.date().isoformat(),
+            "window_end": validation_end.date().isoformat(),
             "old_version": base.version,
             "new_version": new_version,
             "old_total_return_pct": old_metrics.total_return_pct,
@@ -264,22 +305,27 @@ def run_weekly_improvement(conn: Optional[sqlite3.Connection] = None, now: Optio
             "new_trade_count": new_metrics.trade_count,
             "old_hit_rate": old_metrics.hit_rate,
             "new_hit_rate": new_metrics.hit_rate,
+            "new_wins_backtest": new_wins_backtest,
         }
 
+        # Always a candidate, win or lose the backtest -- activation is a
+        # separate, human-only step (see module docstring).
         save_version(
             new_params,
             parent_version=base.version,
             hypothesis=hypothesis,
-            active=accepted,
+            status="candidate",
             backtest=backtest_summary,
             conn=conn,
         )
 
         return {
-            "status": "accepted" if accepted else "rejected",
+            "status": "candidate",
             "pattern": vars(pattern),
             "hypothesis": hypothesis,
             "backtest": backtest_summary,
+            "base_params": base,
+            "new_params": new_params,
         }
     finally:
         if owns_conn:

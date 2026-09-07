@@ -11,6 +11,10 @@ on:
     # Weekdays 05:00 UTC
     - cron: "0 5 * * 1-5"
 
+concurrency:
+  group: db-write
+  cancel-in-progress: false
+
 jobs:
   daily-report:
     runs-on: ubuntu-latest

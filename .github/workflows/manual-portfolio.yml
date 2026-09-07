@@ -13,6 +13,11 @@ on:
 
 permissions:
   contents: write
+  actions: write  # needed to trigger pages.yml after pushing (see below)
+
+concurrency:
+  group: db-write
+  cancel-in-progress: false
 
 jobs:
   run-portfolio:
@@ -34,56 +39,51 @@ jobs:
       - name: Run portfolio update
         run: python scripts/run_portfolio.py "${{ inputs.days || '60' }}"
 
-      - name: Generate docs/watchlist.json
-        run: |
-          python - <<'PY'
-          import json
-          from alsatbotu.config import WATCHLIST
-
-          data = [{"symbol": w["symbol"], "category": w["category"]} for w in WATCHLIST]
-          with open("docs/watchlist.json", "w", encoding="utf-8") as f:
-              json.dump(data, f, ensure_ascii=False, indent=2)
-              f.write("\n")
-          PY
-
-      - name: Sync data/ into docs/data/
-        run: |
-          mkdir -p docs/data
-          for f in portfolio.json signals.jsonl health.json equity.jsonl; do
-            [ -f "data/$f" ] && cp "data/$f" "docs/data/$f"
-          done
-
-      # GitHub Actions does not trigger other workflows' `on: push` events
-      # for pushes made with the default GITHUB_TOKEN (this job's own
-      # commit), so pages.yml never re-runs on its own after this job
-      # pushes -- the dashboard would keep serving whatever docs/data/
-      # last looked like at the last human push. Committing the refreshed
-      # docs/watchlist.json and docs/data/ here, in the same commit as
-      # data/, is what keeps the live panel in sync with every run.
-      - name: Commit and push portfolio state + dashboard data
+      # docs/data/ and docs/watchlist.json are no longer generated or
+      # committed here: they are build output, generated from data/ inside
+      # pages.yml at deploy time, so data/ stays the single source of
+      # truth instead of a second, manually-synced copy.
+      - name: Commit and push portfolio state
+        id: commit_and_push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl \
-                    docs/watchlist.json docs/data/portfolio.json docs/data/signals.jsonl \
-                    docs/data/health.json docs/data/equity.jsonl; do
+          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl; do
             [ -f "$f" ] && git add "$f"
           done
           if git diff --cached --quiet; then
             echo "No portfolio changes to commit."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "chore: update paper portfolio state and dashboard data"
+          git commit -m "chore: update paper portfolio state"
           # main can move between checkout and this push (another workflow's
-          # commit landing first) -- rebase onto the latest main and retry
-          # rather than failing the whole run over a push race.
-          for attempt in 1 2 3 4 5; do
+          # commit landing first) -- fetch + rebase + retry a few times for
+          # that ordinary race. A real conflict (two runs touching the same
+          # bytes) aborts the rebase and fails the job instead of forcing a
+          # resolution that could silently overwrite data.
+          for attempt in 1 2 3; do
             if git push; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            echo "Push rejected (attempt $attempt/3), fetching latest main and rebasing..."
             git fetch origin main
-            git rebase origin/main
+            if ! git rebase origin/main; then
+              echo "::error::Rebase conflict on portfolio data -- aborting rather than overwriting. Investigate manually."
+              git rebase --abort
+              exit 1
+            fi
           done
-          echo "::error::Failed to push portfolio state after 5 attempts."
+          echo "::error::Failed to push portfolio state after 3 attempts."
           exit 1
+
+      # Pushes made with the default GITHUB_TOKEN don't trigger other
+      # workflows' `on: push` events, so pages.yml would not otherwise
+      # re-run after this job's push -- explicitly dispatch it so the
+      # dashboard picks up the new data/ without a human push.
+      - name: Trigger Pages rebuild
+        if: steps.commit_and_push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref ${{ github.ref_name }}

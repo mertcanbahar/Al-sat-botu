@@ -1,11 +1,11 @@
-name: Evaluation loop (weekly improvement)
+name: Evaluation loop (process approvals)
 
 on:
   workflow_dispatch: {}
   schedule:
-    # Sunday 21:00 UTC (00:00 Europe/Istanbul Monday), after the day's
-    # last hourly eval cycle and daily report have run.
-    - cron: "0 21 * * 0"
+    # Every 10 minutes -- short-polls Telegram for approve/reject taps on
+    # candidate strategy versions (see scripts/process_telegram_approvals.py).
+    - cron: "*/10 * * * *"
 
 permissions:
   contents: write
@@ -15,10 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  weekly-improvement:
+  process-approvals:
     runs-on: ubuntu-latest
     env:
-      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
       TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
@@ -31,19 +30,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run weekly improvement loop
-        run: python scripts/run_improvement_loop.py
+      - name: Process pending Telegram approve/reject taps
+        run: python scripts/process_telegram_approvals.py
 
-      - name: Commit and push strategy version registry
+      - name: Commit and push evaluation database
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/evaluation.db
           if git diff --cached --quiet; then
-            echo "No strategy version changes to commit."
+            echo "No approval changes to commit."
             exit 0
           fi
-          git commit -m "chore: update strategy version registry"
+          git commit -m "chore: apply strategy version approval decision"
           # Fetch + rebase + retry for the ordinary race of another run's
           # commit landing first. A real conflict (two runs touching the
           # same bytes of the .db file) aborts the rebase and fails the
@@ -56,10 +55,10 @@ jobs:
             echo "Push rejected (attempt $attempt/3), fetching latest main and rebasing..."
             git fetch origin main
             if ! git rebase origin/main; then
-              echo "::error::Rebase conflict on strategy version registry -- aborting rather than overwriting. Investigate manually."
+              echo "::error::Rebase conflict on evaluation database -- aborting rather than overwriting. Investigate manually."
               git rebase --abort
               exit 1
             fi
           done
-          echo "::error::Failed to push strategy version registry after 3 attempts."
+          echo "::error::Failed to push evaluation database after 3 attempts."
           exit 1

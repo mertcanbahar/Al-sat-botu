@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: db-write
+  cancel-in-progress: false
+
 jobs:
   eval-cycle:
     runs-on: ubuntu-latest
@@ -40,13 +44,22 @@ jobs:
             exit 0
           fi
           git commit -m "chore: update evaluation database"
-          for attempt in 1 2 3 4 5; do
+          # Fetch + rebase + retry for the ordinary race of another run's
+          # commit landing first. A real conflict (two runs touching the
+          # same bytes of the .db file) aborts the rebase and fails the
+          # job instead of forcing a resolution that could silently
+          # overwrite data.
+          for attempt in 1 2 3; do
             if git push; then
               exit 0
             fi
-            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            echo "Push rejected (attempt $attempt/3), fetching latest main and rebasing..."
             git fetch origin main
-            git rebase origin/main
+            if ! git rebase origin/main; then
+              echo "::error::Rebase conflict on evaluation database -- aborting rather than overwriting. Investigate manually."
+              git rebase --abort
+              exit 1
+            fi
           done
-          echo "::error::Failed to push evaluation database after 5 attempts."
+          echo "::error::Failed to push evaluation database after 3 attempts."
           exit 1
