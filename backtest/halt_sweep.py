@@ -46,6 +46,7 @@ from typing import Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from alsatbotu.config import DEFAULT_HALT_POLICY  # noqa: E402
 from backtest.portfolio_backtest import (  # noqa: E402
     BACKTEST_SYMBOLS,
     STARTING_CAPITAL,
@@ -59,6 +60,15 @@ from backtest.portfolio_backtest import (  # noqa: E402
 
 DEFAULT_THRESHOLDS = [0.20, 0.25, 0.30, 0.35]
 HALT_REASON_PREFIX = "Drawdown halt"
+
+# The two mechanisms compared in --mode compare. "legacy" is exactly what
+# runs live today; "staged" is the graduated state machine. Nothing else
+# differs between the arms -- same signals, same sizing, same costs, same
+# data.
+ARMS: dict[str, dict] = {
+    "legacy %20": {"max_drawdown_pct": 0.20},
+    "kademeli": {"halt_policy": DEFAULT_HALT_POLICY},
+}
 
 
 # --------------------------------------------------------------------------
@@ -175,6 +185,253 @@ def run_threshold(
             "per_symbol": isolated,
         },
     }
+
+
+# --------------------------------------------------------------------------
+# Karşılaştırma modu: legacy mandal vs kademeli durum makinesi
+# --------------------------------------------------------------------------
+# Tek tohumla ölçmek, dünkü histerezis denemesinin düştüğü tuzak: bir tohumda
+# iyi görünen bir mekanizma başka tohumda tersini gösterebiliyor. Bu yüzden
+# her arm birden çok sentetik tohumda koşuluyor ve raporlanan sayılar tohumlar
+# arası dağılım. `worst_account_max_dd` özellikle önemli: histerezisli varyantı
+# eleyen metrik oydu (-22.8% → -28.4%).
+
+def run_arm_once(
+    arm_kwargs: dict, price_data: dict[str, list[dict]], universe: Sequence[dict]
+) -> dict:
+    """One arm, one seed: portfolio-wide run plus 20 isolated accounts."""
+    port = simulate(universe, price_data, STARTING_CAPITAL, **arm_kwargs)
+    port_total, port_cagr, port_dd, port_sharpe = compute_curve_metrics(port.equity_curve)
+    port_halt = halt_stats(port)
+
+    per_symbol_capital = STARTING_CAPITAL / len(BACKTEST_SYMBOLS)
+    account_dds: list[float] = []
+    locked = 0
+    ever_halted = 0
+    blocked = 0
+    trades = 0
+    start_sum = final_sum = 0.0
+    state_days: dict[str, int] = {}
+    recovery_days = 0
+
+    for entry in universe:
+        sim = simulate([entry], price_data, per_symbol_capital, **arm_kwargs)
+        _, _, dd, _ = compute_curve_metrics(sim.equity_curve)
+        stats = halt_stats(sim)
+        if dd is not None:
+            account_dds.append(dd)
+        locked += 1 if stats.halted_at_end else 0
+        ever_halted += 1 if stats.halt_days > 0 else 0
+        blocked += stats.blocked_buy_signals
+        trades += len(sim.trades)
+        if sim.equity_curve:
+            start_sum += sim.equity_curve[0][1]
+            final_sum += sim.equity_curve[-1][1]
+        for name in sim.state_flags:
+            state_days[name] = state_days.get(name, 0) + 1
+        # HALT durumunda ama kapasitesi açılmış günler = güvenlik ağı devrede.
+        recovery_days += sum(
+            1
+            for name, cap in zip(sim.state_flags, sim.capacity_flags)
+            if name == "HALT" and cap > 0
+        )
+
+    return {
+        "portfolio": {
+            "total_return_pct": port_total,
+            "cagr_pct": port_cagr,
+            "max_drawdown_pct": port_dd,
+            "sharpe": port_sharpe,
+            "trade_count": len(port.trades),
+            "halt_days_pct": port_halt.halt_days_pct,
+            "locked_at_end": port_halt.halted_at_end,
+            "blocked_buy_signals": port_halt.blocked_buy_signals,
+        },
+        "isolated": {
+            "aggregate_total_return_pct": (
+                final_sum / start_sum - 1.0 if start_sum else None
+            ),
+            "accounts": len(universe),
+            "accounts_ever_halted": ever_halted,
+            "accounts_locked_at_end": locked,
+            "worst_account_max_dd": min(account_dds) if account_dds else None,
+            "median_account_max_dd": statistics.median(account_dds) if account_dds else None,
+            "total_trades": trades,
+            "total_blocked_buy_signals": blocked,
+            "state_days": state_days,
+            "recovery_net_days": recovery_days,
+        },
+    }
+
+
+def _mean(values: Sequence[Optional[float]]) -> Optional[float]:
+    present = [v for v in values if v is not None]
+    return statistics.fmean(present) if present else None
+
+
+def run_comparison(seeds: Sequence[int], years: int, price_data: Optional[dict] = None) -> dict:
+    """Every arm over every seed. Real data means a single fixed dataset."""
+    per_arm: dict[str, list[dict]] = {name: [] for name in ARMS}
+
+    for seed in seeds:
+        if price_data is None:
+            data = generate_synthetic_data(BACKTEST_SYMBOLS, years, seed=seed)
+        else:
+            data = price_data
+        universe = [e for e in BACKTEST_SYMBOLS if e["symbol"] in data]
+
+        for name, kwargs in ARMS.items():
+            print(f"  tohum {seed} / {name} ...", flush=True)
+            per_arm[name].append(run_arm_once(kwargs, data, universe))
+
+    summary: dict[str, dict] = {}
+    for name, runs in per_arm.items():
+        summary[name] = {
+            "seeds": len(runs),
+            "portfolio": {
+                key: _mean([r["portfolio"][key] for r in runs])
+                for key in ("total_return_pct", "cagr_pct", "max_drawdown_pct", "sharpe")
+            },
+            "portfolio_locked_runs": sum(1 for r in runs if r["portfolio"]["locked_at_end"]),
+            "portfolio_halt_days_pct": _mean([r["portfolio"]["halt_days_pct"] for r in runs]),
+            "portfolio_trades": _mean([float(r["portfolio"]["trade_count"]) for r in runs]),
+            "isolated": {
+                "aggregate_total_return_pct": _mean(
+                    [r["isolated"]["aggregate_total_return_pct"] for r in runs]
+                ),
+                "accounts_locked_at_end": _mean(
+                    [float(r["isolated"]["accounts_locked_at_end"]) for r in runs]
+                ),
+                "accounts_ever_halted": _mean(
+                    [float(r["isolated"]["accounts_ever_halted"]) for r in runs]
+                ),
+                "worst_account_max_dd": _mean(
+                    [r["isolated"]["worst_account_max_dd"] for r in runs]
+                ),
+                "worst_account_max_dd_across_seeds": min(
+                    [r["isolated"]["worst_account_max_dd"] for r in runs if r["isolated"]["worst_account_max_dd"] is not None],
+                    default=None,
+                ),
+                "median_account_max_dd": _mean(
+                    [r["isolated"]["median_account_max_dd"] for r in runs]
+                ),
+                "total_trades": _mean([float(r["isolated"]["total_trades"]) for r in runs]),
+                "total_blocked_buy_signals": _mean(
+                    [float(r["isolated"]["total_blocked_buy_signals"]) for r in runs]
+                ),
+                "recovery_net_days": _mean(
+                    [float(r["isolated"]["recovery_net_days"]) for r in runs]
+                ),
+                "state_days": {
+                    state: _mean([float(r["isolated"]["state_days"].get(state, 0)) for r in runs])
+                    for state in ("NORMAL", "CAUTION", "DEFENSIVE", "HALT")
+                },
+            },
+            "runs": runs,
+        }
+    return summary
+
+
+def write_comparison_markdown(
+    summary: dict, path: Path, synthetic: bool, years: int, seeds: Sequence[int]
+) -> None:
+    names = list(summary)
+    lines: list[str] = []
+    lines.append("# Halt mekanizması: legacy sabit %20 mandal vs kademeli durum makinesi")
+    lines.append("")
+    lines.append(f"Üretim zamanı: {datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}")
+    lines.append("")
+    if synthetic:
+        lines.append(
+            f"> ⚠️ **SENTETİK VERİ**, {len(seeds)} tohum ({', '.join(map(str, seeds))}). "
+            "Gerçek piyasa verisi değil; `generate_synthetic_data()`'nın deterministik "
+            "rastgele yürüyüşü. Mekanizmaların *göreli* davranışı okunabilir, getiri "
+            "rakamları gerçek performans tahmini DEĞİLDİR. Tüm sayılar tohumlar arası "
+            "ortalamadır."
+        )
+    else:
+        lines.append(
+            f"Gerçek Twelve Data günlük verisi, {years} yıl, {len(BACKTEST_SYMBOLS)} sembol. "
+            "Tek veri seti olduğu için tohum ortalaması yok."
+        )
+    lines.append("")
+    lines.append(
+        "İki kol arasındaki tek fark halt mekanizması: aynı sinyal motoru, aynı "
+        "pozisyon boyutlandırma, aynı maliyet modeli, aynı veri, aynı T+1 açılış "
+        "yürütmesi."
+    )
+    lines.append("")
+
+    header = "| Metrik | " + " | ".join(names) + " |"
+    sep = "|---|" + "---|" * len(names)
+
+    def row(label: str, fn) -> None:
+        lines.append(f"| {label} | " + " | ".join(fn(summary[n]) for n in names) + " |")
+
+    lines.append("## 1) İzole hesaplar (20 tek-sembol hesabı) — kilitlenmenin görüldüğü yer")
+    lines.append("")
+    lines.append(header)
+    lines.append(sep)
+    row("**Sonda kilitli hesap** (20 üzerinden)", lambda s: _num(s["isolated"]["accounts_locked_at_end"], 1))
+    row("Halt'a hiç girmiş hesap", lambda s: _num(s["isolated"]["accounts_ever_halted"], 1))
+    row("**En kötü hesap maks. DD** (ort.)", lambda s: _pct(s["isolated"]["worst_account_max_dd"]))
+    row("En kötü hesap maks. DD (tüm tohumların en kötüsü)", lambda s: _pct(s["isolated"]["worst_account_max_dd_across_seeds"]))
+    row("Medyan hesap maks. DD", lambda s: _pct(s["isolated"]["median_account_max_dd"]))
+    row("Toplam getiri (20 hesap)", lambda s: _pct(s["isolated"]["aggregate_total_return_pct"]))
+    row("Toplam işlem", lambda s: _num(s["isolated"]["total_trades"], 1))
+    row("Halt'ın engellediği ALIM sinyali", lambda s: _num(s["isolated"]["total_blocked_buy_signals"], 1))
+    row("Güvenlik ağının açık olduğu gün", lambda s: _num(s["isolated"]["recovery_net_days"], 1))
+    lines.append("")
+
+    lines.append("## 2) Portföy geneli (paylaşılan sermaye)")
+    lines.append("")
+    lines.append(header)
+    lines.append(sep)
+    row("Toplam getiri", lambda s: _pct(s["portfolio"]["total_return_pct"]))
+    row("CAGR", lambda s: _pct(s["portfolio"]["cagr_pct"]))
+    row("Gerçekleşen maks. DD", lambda s: _pct(s["portfolio"]["max_drawdown_pct"]))
+    row("Sharpe", lambda s: _num(s["portfolio"]["sharpe"]))
+    row("İşlem sayısı", lambda s: _num(s["portfolio_trades"], 1))
+    row("Halt aktif gün oranı", lambda s: _pct(s["portfolio_halt_days_pct"], 1))
+    row("**Sonda kilitli koşu sayısı**", lambda s: f"{s['portfolio_locked_runs']}/{s['seeds']}")
+    lines.append("")
+
+    lines.append("## 3) Kademeli kolun durum dağılımı (izole hesap-günü)")
+    lines.append("")
+    staged = summary.get("kademeli")
+    if staged:
+        lines.append("| Durum | Ortalama gün | Kapasite |")
+        lines.append("|---|---|---|")
+        for state, capacity in (
+            ("NORMAL", "100%"),
+            ("CAUTION", "75%"),
+            ("DEFENSIVE", "50%"),
+            ("HALT", "0% → 14 gün sonra 25%"),
+        ):
+            lines.append(
+                f"| {state} | {_num(staged['isolated']['state_days'][state], 1)} | {capacity} |"
+            )
+        lines.append("")
+
+    lines.append("## Nasıl okunmalı")
+    lines.append("")
+    lines.append(
+        "- **Sonda kilitli hesap**: mekanizmanın çözmesi istenen asıl sorun. "
+        "Legacy'de bir kez tetiklenen hesap bir daha alım yapamıyor."
+    )
+    lines.append(
+        "- **En kötü hesap maks. DD**: koruma gerçekten koruyor mu? Dünkü histerezis "
+        "denemesi tam burada elendi — kilitlenmeyi azaltırken en kötü hesabın "
+        "drawdown'ını büyütmüştü. Bu sayı legacy'den kötüyse mekanizma sadece maliyet."
+    )
+    lines.append(
+        "- **Güvenlik ağının açık olduğu gün** sıfırsa 14 günlük kural hiç devreye "
+        "girmemiştir, yani o parametre bu test yatağında sınanmamış demektir."
+    )
+    lines.append("")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 # --------------------------------------------------------------------------
@@ -303,6 +560,22 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     parser.add_argument("--out-dir", default="backtest/results")
     parser.add_argument("--thresholds", type=float, nargs="+", default=DEFAULT_THRESHOLDS)
     parser.add_argument(
+        "--mode",
+        choices=("thresholds", "compare"),
+        default="thresholds",
+        help=(
+            "thresholds: legacy mandalı farklı eşiklerde süpür (varsayılan, eski davranış). "
+            "compare: legacy %%20 mandalı ile kademeli durum makinesini yan yana koy."
+        ),
+    )
+    parser.add_argument(
+        "--seeds",
+        type=int,
+        nargs="+",
+        default=[1, 2, 3, 4, 5, 6, 7, 8],
+        help="compare modunda kullanılacak sentetik tohumlar (gerçek veride yok sayılır)",
+    )
+    parser.add_argument(
         "--synthetic",
         action="store_true",
         help="Sentetik veri kullan (ağ yok, gerçek sonuç değil)",
@@ -315,6 +588,47 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             "--synthetic sonuçları backtest/results/ altına yazılamaz "
             "(gerçek backtest sonuçlarıyla karışmasın diye). Başka bir --out-dir verin."
         )
+
+    if args.mode == "compare":
+        seeds = args.seeds if args.synthetic else [0]
+        real_data = None
+        if not args.synthetic:
+            print(f"Veri yükleniyor (Twelve Data, {args.years}y)...")
+            real_data = load_price_data(BACKTEST_SYMBOLS, args.years)
+            if not real_data:
+                raise SystemExit("Hiçbir sembol için kullanılabilir veri yok.")
+        print(f"Karşılaştırma: {' vs '.join(ARMS)} — {len(seeds)} koşu")
+        summary = run_comparison(seeds, args.years, price_data=real_data)
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "halt_compare.json").write_text(
+            json.dumps(
+                {
+                    "generated_at": datetime.now(timezone.utc)
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    "synthetic": args.synthetic,
+                    "years": args.years,
+                    "seeds": list(seeds),
+                    "summary": summary,
+                },
+                indent=2,
+                default=str,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        write_comparison_markdown(
+            summary, out_dir / "halt_compare.md", args.synthetic, args.years, seeds
+        )
+        for name, s in summary.items():
+            print(
+                f"\n{name}: kilitli hesap {_num(s['isolated']['accounts_locked_at_end'], 1)}/20, "
+                f"en kötü hesap DD {_pct(s['isolated']['worst_account_max_dd'])}, "
+                f"izole getiri {_pct(s['isolated']['aggregate_total_return_pct'])}"
+            )
+        print(f"\nSonuçlar yazıldı: {out_dir}/halt_compare.md, {out_dir}/halt_compare.json")
+        return
 
     print(f"Veri yükleniyor ({'sentetik' if args.synthetic else 'Twelve Data'}, {args.years}y)...")
     if args.synthetic:

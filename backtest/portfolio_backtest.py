@@ -68,8 +68,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from alsatbotu.config import SYMBOL_CATEGORIES
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Signal, evaluate
+from engine.halt import HaltPolicy, HaltState
 from engine.risk import evaluate_buy, is_drawdown_halted
-from portfolio.state import PortfolioState, close_position, open_position, update_peak_equity
+from portfolio.state import (
+    PortfolioState,
+    close_position,
+    open_position,
+    update_halt_state,
+    update_peak_equity,
+)
 
 # --------------------------------------------------------------------------
 # Backtest universe
@@ -254,8 +261,13 @@ class SimResult:
     window_end: str
     # Simülasyon günlerinin her biri için "bugün drawdown halt aktif mi?"
     # (True = o gün yeni ALIM yasak). halt_sweep.py bunu kilitlenme
-    # ölçümü için kullanır.
+    # ölçümü için kullanır. Kademeli politikada bu "kapasite sıfır mı"
+    # demektir, yani 14 günlük güvenlik ağı açıldığında False'a döner.
     halt_flags: list[bool] = field(default_factory=list)
+    # Yalnızca kademeli politikada dolar: her günün durum adı ve pozisyon
+    # kapasitesi. Legacy koşuda boş kalır (o modda tek bir mandal var).
+    state_flags: list[str] = field(default_factory=list)
+    capacity_flags: list[float] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------
@@ -268,7 +280,16 @@ def simulate(
     price_data: dict[str, list[dict]],
     starting_capital: float,
     max_drawdown_pct: Optional[float] = None,
+    halt_policy: Optional[HaltPolicy] = None,
 ) -> SimResult:
+    """Run the rule engine over `universe`, sharing one PortfolioState.
+
+    `halt_policy` selects the drawdown mechanism, exactly as in
+    `engine.risk.evaluate_buy()`: left as None the legacy single-threshold
+    latch at `max_drawdown_pct` applies and results are bit-for-bit what they
+    were before the state machine existed. Given a policy, the graduated
+    machine applies instead and `max_drawdown_pct` is ignored.
+    """
     symbols = [e["symbol"] for e in universe if e["symbol"] in price_data]
     categories = {e["symbol"]: e["category"] for e in universe}
     rows_by_symbol = {s: price_data[s] for s in symbols}
@@ -299,6 +320,8 @@ def simulate(
     rejected: list[RejectedSignal] = []
     equity_curve: list[tuple[str, float]] = []
     halt_flags: list[bool] = []
+    state_flags: list[str] = []
+    capacity_flags: list[float] = []
     days_in_position: dict[str, int] = {s: 0 for s in symbols}
 
     for d in sim_dates:
@@ -319,7 +342,15 @@ def simulate(
                 fill = buy_fill_price(open_price)
                 atr = indicators.get("atr")
                 decision = evaluate_buy(
-                    state, symbol, category, fill, atr, current_prices, max_drawdown_pct
+                    state,
+                    symbol,
+                    category,
+                    fill,
+                    atr,
+                    current_prices,
+                    max_drawdown_pct,
+                    policy=halt_policy,
+                    today=d,
                 )
                 if not decision.approved:
                     rejected.append(RejectedSignal(symbol, d, "BUY", decision.reasons))
@@ -380,7 +411,15 @@ def simulate(
             days_in_position[symbol] = days_in_position.get(symbol, 0) + 1
         equity = update_peak_equity(state, current_prices)
         equity_curve.append((d, equity))
-        halt_flags.append(is_drawdown_halted(equity, state.peak_equity, max_drawdown_pct))
+        if halt_policy is None:
+            halt_flags.append(is_drawdown_halted(equity, state.peak_equity, max_drawdown_pct))
+        else:
+            # Advancing the machine here is what makes the HALT clock tick on
+            # calendar days and carries the hysteresis into tomorrow's buys.
+            assessment = update_halt_state(state, equity, today=d, policy=halt_policy)
+            halt_flags.append(assessment.blocks_new_buys)
+            state_flags.append(assessment.state.name)
+            capacity_flags.append(assessment.capacity)
 
         # 3) Compute tomorrow's decisions from today's close (no lookahead:
         #    only rows up to and including index `idx` are ever passed in).
@@ -406,6 +445,8 @@ def simulate(
         window_start=sim_dates[0],
         window_end=sim_dates[-1],
         halt_flags=halt_flags,
+        state_flags=state_flags,
+        capacity_flags=capacity_flags,
     )
 
 
