@@ -10,8 +10,8 @@ reimplemented here.
    dedicated sub-account (starting capital / 20) and its own
    `PortfolioState`, so portfolio-wide caps (max positions, category
    exposure) never bind across symbols -- only the per-trade risk sizing
-   and the drawdown halt (`engine.risk.HaltPolicy`, overridable per run
-   via `simulate(..., halt_policy=...)`) apply, exactly as they would
+   and the drawdown halt (`MAX_DRAWDOWN_PCT`, overridable per run via
+   `simulate(..., max_drawdown_pct=...)`) apply, exactly as they would
    for a single-symbol account. This answers "does the rule engine beat
    buy-and-hold for this specific stock?"
 
@@ -68,8 +68,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from alsatbotu.config import SYMBOL_CATEGORIES
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Signal, evaluate
-from engine.risk import HaltPolicy, evaluate_buy, update_halt_state
-from portfolio.state import PortfolioState, close_position, open_position
+from engine.risk import evaluate_buy, is_drawdown_halted
+from portfolio.state import PortfolioState, close_position, open_position, update_peak_equity
 
 # --------------------------------------------------------------------------
 # Backtest universe
@@ -256,11 +256,6 @@ class SimResult:
     # (True = o gün yeni ALIM yasak). halt_sweep.py bunu kilitlenme
     # ölçümü için kullanır.
     halt_flags: list[bool] = field(default_factory=list)
-    # (tarih, geçiş, açıklama) -- "halted" / "released" / "reset" / "stopped".
-    halt_transitions: list[tuple[str, str, str]] = field(default_factory=list)
-    halt_resets: int = 0
-    stopped: bool = False
-    stop_reason: Optional[str] = None
 
 
 # --------------------------------------------------------------------------
@@ -272,7 +267,7 @@ def simulate(
     universe: Sequence[dict],
     price_data: dict[str, list[dict]],
     starting_capital: float,
-    halt_policy: Optional[HaltPolicy] = None,
+    max_drawdown_pct: Optional[float] = None,
 ) -> SimResult:
     symbols = [e["symbol"] for e in universe if e["symbol"] in price_data]
     categories = {e["symbol"]: e["category"] for e in universe}
@@ -304,7 +299,6 @@ def simulate(
     rejected: list[RejectedSignal] = []
     equity_curve: list[tuple[str, float]] = []
     halt_flags: list[bool] = []
-    halt_transitions: list[tuple[str, str, str]] = []
     days_in_position: dict[str, int] = {s: 0 for s in symbols}
 
     for d in sim_dates:
@@ -324,7 +318,9 @@ def simulate(
                     continue
                 fill = buy_fill_price(open_price)
                 atr = indicators.get("atr")
-                decision = evaluate_buy(state, symbol, category, fill, atr, current_prices)
+                decision = evaluate_buy(
+                    state, symbol, category, fill, atr, current_prices, max_drawdown_pct
+                )
                 if not decision.approved:
                     rejected.append(RejectedSignal(symbol, d, "BUY", decision.reasons))
                 else:
@@ -382,14 +378,9 @@ def simulate(
             current_prices[symbol] = rows_by_symbol[symbol][idx]["close"]
         for symbol in state.open_positions:
             days_in_position[symbol] = days_in_position.get(symbol, 0) + 1
-        # update_halt_state() peak'i de günceller ve halt durum makinesini
-        # ilerletir; yarınki ALIM'lar bu işaretlemenin bıraktığı duruma bakar.
-        halt_event = update_halt_state(state, current_prices, halt_policy, mark_date=d)
-        equity = halt_event.equity
+        equity = update_peak_equity(state, current_prices)
         equity_curve.append((d, equity))
-        halt_flags.append(state.halted or state.stopped)
-        if halt_event.transition:
-            halt_transitions.append((d, halt_event.transition, halt_event.detail))
+        halt_flags.append(is_drawdown_halted(equity, state.peak_equity, max_drawdown_pct))
 
         # 3) Compute tomorrow's decisions from today's close (no lookahead:
         #    only rows up to and including index `idx` are ever passed in).
@@ -415,10 +406,6 @@ def simulate(
         window_start=sim_dates[0],
         window_end=sim_dates[-1],
         halt_flags=halt_flags,
-        halt_transitions=halt_transitions,
-        halt_resets=state.halt_resets,
-        stopped=state.stopped,
-        stop_reason=state.stop_reason,
     )
 
 

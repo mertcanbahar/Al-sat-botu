@@ -8,13 +8,9 @@ on:
         required: false
         default: "5"
       thresholds:
-        description: "Space-separated halt thresholds (fractions, e.g. '0.20 0.25')"
+        description: "Space-separated halt thresholds to compare (fractions, e.g. '0.20 0.25 0.30 0.35')"
         required: false
-        default: "0.20"
-      release_pcts:
-        description: "Space-separated release thresholds; 'none' = no hysteresis (old latching behaviour)"
-        required: false
-        default: "none 0.05 0.10 0.15"
+        default: "0.20 0.25 0.30 0.35"
 
 permissions:
   contents: write
@@ -39,8 +35,7 @@ jobs:
         run: |
           python backtest/halt_sweep.py \
             --years "${{ inputs.years || '5' }}" \
-            --thresholds ${{ inputs.thresholds || '0.20' }} \
-            --release-pcts ${{ inputs.release_pcts || 'none 0.05 0.10 0.15' }} \
+            --thresholds ${{ inputs.thresholds || '0.20 0.25 0.30 0.35' }} \
             --out-dir backtest/results
 
       - name: Commit and push sweep results

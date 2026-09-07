@@ -48,18 +48,6 @@ class PortfolioState:
     open_positions: dict[str, Position] = field(default_factory=dict)
     closed_trades: list[ClosedTrade] = field(default_factory=list)
 
-    # -- Drawdown halt durumu (engine.risk.update_halt_state sahibidir) ----
-    # Halt artık anlık bir hesap değil, kalıcı bir durum: bir kez tetiklenince
-    # ancak toparlanma (histerezis) ya da kısmi peak reset'i onu bırakır.
-    halted: bool = False
-    halted_since: Optional[str] = None
-    # Halt başladığından (ya da son reset'ten) beri kaç kez equity işaretlendi.
-    halted_marks: int = 0
-    halt_resets: int = 0
-    # Kalıcı durdurma: yalnızca insan onayıyla kalkar (scripts/resume_halt.py).
-    stopped: bool = False
-    stop_reason: Optional[str] = None
-
     def position_value(self, current_prices: dict[str, float]) -> float:
         return sum(
             position.quantity * current_prices.get(symbol, position.entry_price)
@@ -101,14 +89,6 @@ def load_state(path: Path = PORTFOLIO_STATE_PATH) -> PortfolioState:
             symbol: Position(**data) for symbol, data in raw.get("open_positions", {}).items()
         },
         closed_trades=[ClosedTrade(**data) for data in raw.get("closed_trades", [])],
-        # Halt alanları sonradan eklendi: eski state dosyalarında yoklar,
-        # varsayılanları "hiç halt olmamış" anlamına gelir.
-        halted=raw.get("halted", False),
-        halted_since=raw.get("halted_since"),
-        halted_marks=raw.get("halted_marks", 0),
-        halt_resets=raw.get("halt_resets", 0),
-        stopped=raw.get("stopped", False),
-        stop_reason=raw.get("stop_reason"),
     )
 
 
@@ -125,12 +105,6 @@ def save_state(state: PortfolioState, path: Path = PORTFOLIO_STATE_PATH) -> None
             symbol: asdict(position) for symbol, position in state.open_positions.items()
         },
         "closed_trades": [asdict(trade) for trade in state.closed_trades],
-        "halted": state.halted,
-        "halted_since": state.halted_since,
-        "halted_marks": state.halted_marks,
-        "halt_resets": state.halt_resets,
-        "stopped": state.stopped,
-        "stop_reason": state.stop_reason,
     }
 
     tmp_path = path.with_suffix(path.suffix + ".tmp")

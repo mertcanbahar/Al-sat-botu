@@ -9,25 +9,17 @@ Rules:
   - No single category (see `alsatbotu.config.SYMBOL_CATEGORIES`) may hold
     more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity.
   - At most `MAX_OPEN_POSITIONS` (8) positions open at once.
-  - No new BUYs while the portfolio is drawdown-halted; existing positions
-    may still be sold. The halt is a latching state with hysteresis, not an
-    instantaneous test -- see `HaltPolicy` and `update_halt_state()` below.
+  - No new BUYs once equity has drawn down more than `MAX_DRAWDOWN_PCT`
+    (20%) from its peak; existing positions may still be sold.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from alsatbotu.config import (
     CATEGORY_EXPOSURE_LIMIT_PCT,
-    DRAWDOWN_RELEASE_PCT,
-    HALT_HARD_FLOOR_PCT,
-    HALT_RESET_AFTER_MARKS,
-    HALT_RESET_FRACTION,
     MAX_DRAWDOWN_PCT,
-    MAX_HALT_RESETS,
     MAX_OPEN_POSITIONS,
-    MIN_HALT_MARKS,
     RISK_PER_TRADE_PCT,
 )
 from alsatbotu.signal import ATR_STOP_MULTIPLIER
@@ -47,171 +39,19 @@ def compute_position_size(equity: float, entry_price: float, stop_price: float) 
     return risk_budget / risk_per_unit
 
 
-@dataclass(frozen=True)
-class HaltPolicy:
-    """Drawdown halt'ın tüm parametreleri tek yerde.
+def is_drawdown_halted(
+    current_equity: float, peak_equity: float, max_drawdown_pct: float | None = None
+) -> bool:
+    """True when equity is `max_drawdown_pct` or more below its peak.
 
-    Varsayılanı `DEFAULT_HALT_POLICY` (alsatbotu.config'ten okunur). Süpürme
-    (backtest/halt_sweep.py) alternatif politikaları buradan geçirir; canlı
-    kod hiçbir zaman kendi eşiğini uydurmaz.
+    `max_drawdown_pct` defaults to the live `MAX_DRAWDOWN_PCT`; callers pass
+    it explicitly only to test alternative thresholds (backtest/halt_sweep.py).
     """
-
-    halt_pct: float = MAX_DRAWDOWN_PCT
-    # None = histerezis yok (eski tek yönlü mandal davranışı, karşılaştırma için).
-    release_pct: Optional[float] = DRAWDOWN_RELEASE_PCT
-    min_halt_marks: int = MIN_HALT_MARKS
-    reset_after_marks: int = HALT_RESET_AFTER_MARKS
-    reset_fraction: float = HALT_RESET_FRACTION
-    max_resets: int = MAX_HALT_RESETS
-    hard_floor_pct: float = HALT_HARD_FLOOR_PCT
-
-    @property
-    def latching(self) -> bool:
-        """Serbest bırakma yoksa kural eski tek yönlü mandal gibi davranır."""
-        return self.release_pct is None
-
-
-DEFAULT_HALT_POLICY = HaltPolicy()
-
-# Kalıcı durdurma nedenleri (durum dosyasına yazılır, rapora çıkar).
-STOP_REASON_MAX_RESETS = "max_resets"
-STOP_REASON_HARD_FLOOR = "hard_floor"
-
-
-@dataclass
-class HaltEvent:
-    """Bir equity işaretlemesinde halt durumunda ne değiştiğinin özeti."""
-
-    transition: Optional[str]  # "halted" | "released" | "reset" | "stopped" | None
-    equity: float
-    peak_equity: float
-    drawdown: float
-    halted: bool
-    stopped: bool
-    detail: str = ""
-
-
-def _drawdown(equity: float, peak: float) -> float:
-    return (peak - equity) / peak if peak > 0 else 0.0
-
-
-def update_halt_state(
-    state: PortfolioState,
-    current_prices: dict[str, float],
-    policy: Optional[HaltPolicy] = None,
-    mark_date: Optional[str] = None,
-) -> HaltEvent:
-    """Equity'yi işaretle, peak'i güncelle ve halt durum makinesini ilerlet.
-
-    Her equity işaretlemesinde tam bir kez çağrılmalı: canlı koşuda
-    (scripts/run_portfolio.py) koşu sonunda, backtest'te her simülasyon
-    gününde. `evaluate_buy()` bu fonksiyonun bıraktığı bayrağı okur, yani
-    bir ALIM her zaman *bir önceki* işaretlemenin durumuna göre karara
-    bağlanır -- canlı koşu ile backtest bu konuda birebir aynı davranır.
-
-    Durum geçişleri:
-      AKTİF  -> HALT     : drawdown >= halt_pct
-      HALT   -> AKTİF    : en az min_halt_marks geçmiş VE drawdown <= release_pct
-      HALT   -> AKTİF    : reset_after_marks geçmiş VE açık pozisyon yok
-                           (peak, equity'ye doğru reset_fraction kadar çekilir)
-      HALT   -> DURDU    : reset hakkı bitmiş (max_resets)
-      her an -> DURDU    : equity, başlangıç sermayesinin hard_floor_pct'sinin altında
-
-    DURDU kalıcıdır ve yalnızca insan onayıyla kalkar
-    (scripts/resume_halt.py); bu fonksiyon onu asla kendiliğinden açmaz.
-    """
-    policy = policy or DEFAULT_HALT_POLICY
-
-    equity = state.equity(current_prices)
-    state.peak_equity = max(state.peak_equity, equity)
-    drawdown = _drawdown(equity, state.peak_equity)
-
-    def event(transition: Optional[str], detail: str = "") -> HaltEvent:
-        return HaltEvent(
-            transition=transition,
-            equity=equity,
-            peak_equity=state.peak_equity,
-            drawdown=drawdown,
-            halted=state.halted,
-            stopped=state.stopped,
-            detail=detail,
-        )
-
-    # Kalıcı durdurma her şeyin önünde: insan onayı gelene kadar hiçbir şey değişmez.
-    if state.stopped:
-        return event(None, "Kalıcı durdurma aktif; insan onayı bekleniyor.")
-
-    # Sert taban: sermayenin yarısı gitmişse eşik/histerezis tartışması biter.
-    floor = state.starting_capital * policy.hard_floor_pct
-    if state.starting_capital > 0 and equity < floor:
-        state.stopped = True
-        state.stop_reason = STOP_REASON_HARD_FLOOR
-        state.halted = True
-        return event(
-            "stopped",
-            f"Equity {equity:.2f}, sert tabanın ({floor:.2f}) altına düştü. "
-            "Bot kalıcı olarak durduruldu; devam için insan onayı gerekiyor.",
-        )
-
-    if not state.halted:
-        if drawdown >= policy.halt_pct:
-            state.halted = True
-            state.halted_since = mark_date
-            state.halted_marks = 0
-            return event(
-                "halted",
-                f"Drawdown %{drawdown * 100:.2f} >= %{policy.halt_pct * 100:.0f}; "
-                "yeni ALIM durduruldu.",
-            )
-        return event(None)
-
-    # -- Halt aktif --------------------------------------------------------
-    state.halted_marks += 1
-
-    if (
-        not policy.latching
-        and state.halted_marks >= policy.min_halt_marks
-        and drawdown <= policy.release_pct
-    ):
-        state.halted = False
-        state.halted_since = None
-        state.halted_marks = 0
-        return event(
-            "released",
-            f"Drawdown %{drawdown * 100:.2f} <= %{policy.release_pct * 100:.0f}; "
-            "toparlanma ile halt kalktı.",
-        )
-
-    # Nakitteki bir hesabın equity'si sabittir: toparlanma yapısal olarak
-    # imkânsız, tek çıkış peak'i aşağı çekmek.
-    if (
-        not policy.latching
-        and state.halted_marks >= policy.reset_after_marks
-        and not state.open_positions
-    ):
-        if state.halt_resets >= policy.max_resets:
-            state.stopped = True
-            state.stop_reason = STOP_REASON_MAX_RESETS
-            return event(
-                "stopped",
-                f"{state.halt_resets} kısmi reset'ten sonra hâlâ halt'ta ve nakitte. "
-                "Bot kalıcı olarak durduruldu; devam için insan onayı gerekiyor.",
-            )
-
-        old_peak = state.peak_equity
-        state.peak_equity = equity + policy.reset_fraction * (old_peak - equity)
-        state.halt_resets += 1
-        state.halted = False
-        state.halted_since = None
-        state.halted_marks = 0
-        return event(
-            "reset",
-            f"{policy.reset_after_marks} işaretlemedir halt'ta ve açık pozisyon yok. "
-            f"Peak {old_peak:.2f} -> {state.peak_equity:.2f} çekildi "
-            f"({state.halt_resets}/{policy.max_resets} reset), halt kalktı.",
-        )
-
-    return event(None)
+    if peak_equity <= 0:
+        return False
+    threshold = MAX_DRAWDOWN_PCT if max_drawdown_pct is None else max_drawdown_pct
+    drawdown = (peak_equity - current_equity) / peak_equity
+    return drawdown >= threshold
 
 
 @dataclass
@@ -230,6 +70,7 @@ def evaluate_buy(
     entry_price: float,
     atr: float,
     current_prices: dict[str, float],
+    max_drawdown_pct: float | None = None,
 ) -> RiskDecision:
     """Decide whether to open a new position and, if so, at what size.
 
@@ -237,10 +78,6 @@ def evaluate_buy(
     rather than veto it: the 2%-risk quantity is what the trade would like
     to be, and the limits are the room it actually has. Only a limit with
     no room left at all (or a blocked portfolio) rejects the trade.
-
-    Halt burada yeniden hesaplanmaz: `update_halt_state()`'in son
-    işaretlemede bıraktığı durum okunur. Böylece eşik/histerezis mantığı
-    tek bir yerde yaşar ve canlı koşu ile backtest aynı kararı verir.
     """
     equity = state.equity(current_prices)
     reasons: list[str] = []
@@ -248,16 +85,11 @@ def evaluate_buy(
     if symbol in state.open_positions:
         reasons.append(f"Position already open for {symbol}")
 
-    if state.stopped:
+    halt_threshold = MAX_DRAWDOWN_PCT if max_drawdown_pct is None else max_drawdown_pct
+    if is_drawdown_halted(equity, state.peak_equity, halt_threshold):
         reasons.append(
-            f"Bot kalıcı olarak durduruldu ({state.stop_reason}); "
-            "devam için insan onayı gerekiyor"
-        )
-    elif state.halted:
-        reasons.append(
-            f"Drawdown halt: equity {equity:.2f}, peak {state.peak_equity:.2f} "
-            f"altında (%{_drawdown(equity, state.peak_equity) * 100:.2f}), "
-            f"{state.halted_marks} işaretlemedir halt'ta"
+            f"Drawdown halt: equity {equity:.2f} is more than "
+            f"{halt_threshold * 100:.0f}% below peak {state.peak_equity:.2f}"
         )
 
     if len(state.open_positions) >= MAX_OPEN_POSITIONS:

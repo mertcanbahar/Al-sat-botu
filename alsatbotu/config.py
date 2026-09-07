@@ -30,31 +30,7 @@ STARTING_CAPITAL = float(os.environ.get("ALSATBOTU_STARTING_CAPITAL", "10000"))
 RISK_PER_TRADE_PCT = 0.02
 CATEGORY_EXPOSURE_LIMIT_PCT = 0.40
 MAX_OPEN_POSITIONS = 8
-# -- Drawdown halt (histerezisli) ---------------------------------------
-# Equity peak'inden MAX_DRAWDOWN_PCT kadar düşülünce yeni ALIM durur (mevcut
-# pozisyonlar satılmaya devam eder). Halt anlık bir hesap değil, kalıcı bir
-# durumdur: ancak aşağıdaki koşullardan biriyle kalkar.
-#
-#   1. Toparlanma (histerezis): drawdown DRAWDOWN_RELEASE_PCT'ye inerse.
-#   2. Kısmi peak reset'i: halt HALT_RESET_AFTER_MARKS işaretleme boyunca
-#      sürmüş VE hesapta açık pozisyon kalmamışsa. Nakitteki bir hesabın
-#      equity'si sabittir, yani (1) yapısal olarak imkânsızdır -- peak,
-#      equity'ye doğru HALT_RESET_FRACTION kadar çekilerek halt bırakılır.
-#      Koruma tamamen sıfırlanmaz, kademeli olarak gevşer.
-#   3. Hiçbiri: MAX_HALT_RESETS reset'ten sonra ya da equity başlangıç
-#      sermayesinin HALT_HARD_FLOOR_PCT altına düşerse bot KALICI olarak
-#      durur ve yalnızca insan onayıyla (scripts/resume_halt.py) devam eder.
-#
-# Süpürme (backtest/halt_sweep.py) canlı varsayılanları değiştirmeden
-# koşabilsin diye hepsi ortam değişkeniyle ezilebilir.
-MAX_DRAWDOWN_PCT = float(os.environ.get("ALSATBOTU_MAX_DRAWDOWN_PCT", "0.20"))
-DRAWDOWN_RELEASE_PCT = float(os.environ.get("ALSATBOTU_DRAWDOWN_RELEASE_PCT", "0.10"))
-# Çırpınma freni: halt en az bu kadar işaretleme sürmeden toparlanmayla kalkmaz.
-MIN_HALT_MARKS = int(os.environ.get("ALSATBOTU_MIN_HALT_MARKS", "10"))
-HALT_RESET_AFTER_MARKS = int(os.environ.get("ALSATBOTU_HALT_RESET_AFTER_MARKS", "60"))
-HALT_RESET_FRACTION = float(os.environ.get("ALSATBOTU_HALT_RESET_FRACTION", "0.5"))
-MAX_HALT_RESETS = int(os.environ.get("ALSATBOTU_MAX_HALT_RESETS", "2"))
-HALT_HARD_FLOOR_PCT = float(os.environ.get("ALSATBOTU_HALT_HARD_FLOOR_PCT", "0.50"))
+MAX_DRAWDOWN_PCT = 0.20
 
 # Symbol -> category, used by the risk engine's category exposure cap.
 # "other" is the fallback category for any symbol not listed here.

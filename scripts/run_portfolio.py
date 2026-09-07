@@ -33,14 +33,14 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from alsatbotu.config import DATA_DIR, MAX_HALT_RESETS, WATCHLIST
+from alsatbotu.config import DATA_DIR, WATCHLIST
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Decision, Signal, evaluate
-from engine.risk import evaluate_buy, update_halt_state
+from engine.risk import evaluate_buy
 from notify.telegram import is_configured as telegram_is_configured, send_message
 from portfolio.ledger import last_decisions, log_signal
-from portfolio.state import close_position, load_state, open_position, save_state
+from portfolio.state import close_position, load_state, open_position, save_state, update_peak_equity
 
 SIGNAL_LABELS = {Signal.BUY: "🟢 AL", Signal.SELL: "🔴 SAT"}
 
@@ -231,15 +231,7 @@ def run(days: int = 60) -> None:
         else:
             print(f"{symbol}: HOLD @ {price:.4f}")
 
-    # Halt durum makinesini bu koşunun equity işaretlemesiyle ilerlet.
-    # Bir sonraki koşudaki ALIM'lar buradan çıkan duruma bakar (backtest'te
-    # de aynı sıra geçerli: işaretle, sonra ertesi gün işlem yap).
-    halt_event = update_halt_state(
-        state, current_prices, mark_date=datetime.now(timezone.utc).isoformat()
-    )
-    equity = halt_event.equity
-    if halt_event.transition:
-        print(f"HALT [{halt_event.transition}]: {halt_event.detail}")
+    equity = update_peak_equity(state, current_prices)
     save_state(state)
 
     _write_health(
@@ -257,12 +249,6 @@ def run(days: int = 60) -> None:
     print()
     print(f"Cash: {state.cash:.2f}")
     print(f"Equity: {equity:.2f} (peak {state.peak_equity:.2f})")
-    if state.stopped:
-        print(f"DURUM: bot kalıcı olarak durduruldu ({state.stop_reason}). "
-              "Devam için: python scripts/resume_halt.py --onayla")
-    elif state.halted:
-        print(f"DURUM: drawdown halt aktif ({state.halted_marks} işaretlemedir), "
-              f"yeni ALIM yok. Reset hakkı: {state.halt_resets}/{MAX_HALT_RESETS}")
     print(f"Open positions: {len(state.open_positions)}")
     for symbol, position in state.open_positions.items():
         print(
