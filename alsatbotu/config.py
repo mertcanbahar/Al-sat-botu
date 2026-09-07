@@ -64,10 +64,14 @@ HALT_CAPACITY_HALT = float(os.environ.get("ALSATBOTU_HALT_CAPACITY_HALT", "0.00"
 # denemeye başlar.
 HALT_RECOVERY_DAYS = int(os.environ.get("ALSATBOTU_HALT_RECOVERY_DAYS", "14"))
 HALT_RECOVERY_CAPACITY = float(os.environ.get("ALSATBOTU_HALT_RECOVERY_CAPACITY", "0.25"))
-# Ağ yalnızca drawdown HALT'a girildiği günden beri derinleşmediyse açılır:
-# düşmeye devam eden bir piyasaya %25 boyutla geri binmeyi engeller.
+# Ağ yalnızca drawdown HALT'a girildiği günden beri derinleşmediyse açılır.
+# VARSAYILAN KAPALI: sentetik ölçüm bu koşulun kilitlenmeyi geri getirdiğini
+# gösterdi (bloke seriler 519-641 gün) ve portföy getirisini 6.7 puan
+# düşürdü, karşılığında tabanın zaten yaptığı işi yaptı. Kod duruyor ki
+# gerçek veride yeniden ölçülebilsin; açmak için env'i "1" yapın.
+# Bkz. backtest/results/synthetic/halt_compare.md
 HALT_RECOVERY_REQUIRES_STABLE_DRAWDOWN = (
-    os.environ.get("ALSATBOTU_HALT_RECOVERY_REQUIRES_STABLE_DD", "1") not in ("0", "false", "False")
+    os.environ.get("ALSATBOTU_HALT_RECOVERY_REQUIRES_STABLE_DD", "0") not in ("0", "false", "False")
 )
 
 # Mutlak taban: bu drawdown'ın altında güvenlik ağı hiç açılmaz, kapasite

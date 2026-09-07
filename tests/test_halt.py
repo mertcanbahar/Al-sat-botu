@@ -425,10 +425,18 @@ def test_policy_rejects_half_configured_floor():
         HaltPolicy(floor_pct=0.30, floor_exit_pct=None)
 
 
-def test_live_default_policy_carries_the_floor_and_the_condition():
+def test_live_default_policy_is_the_floor_without_the_condition():
+    """The default is the "v1 + taban %30" arm the synthetic run left standing.
+
+    The stability condition ships switched off: it measured as reintroducing
+    the lockout (519-641 day blocked streaks) and costing 6.7 points of
+    portfolio return, to do a job the floor already does. The code stays so
+    it can be re-measured on real data -- see
+    backtest/results/synthetic/halt_compare.md.
+    """
     from alsatbotu.config import DEFAULT_HALT_POLICY
 
-    assert DEFAULT_HALT_POLICY.recovery_requires_stable_drawdown is True
+    assert DEFAULT_HALT_POLICY.recovery_requires_stable_drawdown is False
     assert DEFAULT_HALT_POLICY.floor_pct == pytest.approx(0.30)
     assert DEFAULT_HALT_POLICY.floor_exit_pct == pytest.approx(0.25)
 

@@ -3,12 +3,20 @@ name: Manual drawdown-halt threshold sweep
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "thresholds: legacy mandalı eşiklerde süpür. compare: legacy %20 / kademeli v1 / v1+taban%30 yan yana."
+        required: false
+        type: choice
+        default: compare
+        options:
+          - compare
+          - thresholds
       years:
         description: "Years of daily history to backtest"
         required: false
         default: "5"
       thresholds:
-        description: "Space-separated halt thresholds to compare (fractions, e.g. '0.20 0.25 0.30 0.35')"
+        description: "thresholds modunda süpürülecek eşikler (fractions, e.g. '0.20 0.25 0.30 0.35')"
         required: false
         default: "0.20 0.25 0.30 0.35"
 
@@ -23,6 +31,11 @@ jobs:
       TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The push step below needs the branch, not a detached HEAD, and
+          # needs history to rebase onto its own remote counterpart.
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -31,32 +44,75 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Sweep drawdown-halt thresholds on real data
+      - name: Fail fast if the API key is missing
         run: |
-          python backtest/halt_sweep.py \
-            --years "${{ inputs.years || '5' }}" \
-            --thresholds ${{ inputs.thresholds || '0.20 0.25 0.30 0.35' }} \
-            --out-dir backtest/results
+          if [ -z "${TWELVEDATA_API_KEY}" ]; then
+            echo "::error::TWELVEDATA_API_KEY is empty. The repository secret is named" \
+                 "TWELVE_DATA_KEY -- check it exists and is readable by this workflow."
+            exit 1
+          fi
+
+      - name: Sweep drawdown-halt behaviour on real data
+        # Inputs go in as environment variables rather than being interpolated
+        # into the script body: `${{ }}` inside a run block splices attacker-
+        # controllable text straight into the shell.
+        env:
+          MODE: ${{ inputs.mode }}
+          YEARS: ${{ inputs.years }}
+          THRESHOLDS: ${{ inputs.thresholds }}
+        run: |
+          set -euo pipefail
+          case "$MODE" in
+            compare)
+              python backtest/halt_sweep.py \
+                --mode compare \
+                --years "$YEARS" \
+                --out-dir backtest/results
+              ;;
+            thresholds)
+              # Word-splitting is intended here: THRESHOLDS is a list. It is
+              # validated as numbers first so the split cannot smuggle flags.
+              for t in $THRESHOLDS; do
+                case "$t" in
+                  ''|*[!0-9.]*) echo "::error::Invalid threshold: $t"; exit 1 ;;
+                esac
+              done
+              # shellcheck disable=SC2086
+              python backtest/halt_sweep.py \
+                --mode thresholds \
+                --years "$YEARS" \
+                --thresholds $THRESHOLDS \
+                --out-dir backtest/results
+              ;;
+            *)
+              echo "::error::Unknown mode: $MODE"; exit 1 ;;
+          esac
 
       - name: Commit and push sweep results
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backtest/results/halt_sweep.md backtest/results/halt_sweep.json
+          git add backtest/results/ || true
           if git diff --cached --quiet; then
             echo "No sweep changes to commit."
             exit 0
           fi
-          git commit -m "chore: update drawdown-halt threshold sweep"
-          # Same race as the portfolio backtest: this job spends minutes
-          # fetching data before it commits, so main can move underneath it.
+          git commit -m "chore: update drawdown-halt sweep results"
+          # This job spends minutes fetching data before it commits, so the
+          # branch can move underneath it. Rebase onto *this* branch's remote
+          # counterpart -- the old version always rebased onto origin/main,
+          # which silently dragged main's commits onto a feature branch (and
+          # would have pushed sweep results to the wrong place).
           for attempt in 1 2 3 4 5; do
-            if git push; then
+            if git push origin "HEAD:$BRANCH"; then
               exit 0
             fi
-            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
-            git fetch origin main
-            git rebase origin/main
+            echo "Push rejected (attempt $attempt), rebasing onto origin/$BRANCH and retrying..."
+            git fetch origin "$BRANCH"
+            git rebase "origin/$BRANCH"
           done
           echo "::error::Failed to push sweep results after 5 attempts."
           exit 1

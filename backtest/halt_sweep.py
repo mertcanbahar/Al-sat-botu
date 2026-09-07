@@ -116,6 +116,12 @@ ARMS: dict[str, dict] = {
     },
 }
 
+# `--mode compare` bunları koşar. Diğer kollar ARMS içinde duruyor ama
+# varsayılana girmiyor: sentetik ölçüm ikisini de eledi (koşullu ağ
+# kilitlenmeyi geri getiriyor, taban %25 getiriyi 8.4 puan yakıyor).
+# Hepsini koşmak için: --arms "legacy %20" "kademeli v1" ...
+COMPARE_DEFAULT_ARMS = ["legacy %20", "kademeli v1", "v1 + taban %30"]
+
 
 # --------------------------------------------------------------------------
 # Tek bir hesabın (portföy ya da izole sembol) halt istatistikleri
@@ -666,7 +672,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             if not real_data:
                 raise SystemExit("Hiçbir sembol için kullanılabilir veri yok.")
         print(f"Karşılaştırma: {' vs '.join(ARMS)} — {len(seeds)} koşu")
-        arms = ARMS if args.arms is None else {k: ARMS[k] for k in args.arms}
+        names = COMPARE_DEFAULT_ARMS if args.arms is None else args.arms
+        unknown = [n for n in names if n not in ARMS]
+        if unknown:
+            parser.error(f"Bilinmeyen kol(lar): {unknown}. Seçenekler: {list(ARMS)}")
+        arms = {k: ARMS[k] for k in names}
         summary = run_comparison(seeds, args.years, price_data=real_data, arms=arms)
 
         out_dir.mkdir(parents=True, exist_ok=True)
