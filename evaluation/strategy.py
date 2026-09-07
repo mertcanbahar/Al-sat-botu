@@ -9,13 +9,19 @@ portfolio, and the weekly improvement loop), so that loop can vary one
 threshold at a time without editing source and redeploying.
 
 `strategy_versions` (see db.py) is the durable registry: each row is one
-named version's parameter set plus whether the weekly loop accepted it.
+named version's parameter set, its lifecycle `status`
+('candidate' / 'active' / 'rejected'), and whether it's the live one.
 Exactly one version is ever `active` at a time; `get_active_params()` is
-what everything else in this package should call.
+what everything else in this package should call. A version only reaches
+`status='active'` through `activate_version()`, which nothing in this
+codebase calls automatically -- see `evaluation/improve.py` and
+`scripts/process_telegram_approvals.py` for the human-approval flow that
+does.
 """
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from typing import Optional, Sequence
@@ -120,21 +126,34 @@ def save_version(
     params: StrategyParams,
     parent_version: Optional[str] = None,
     hypothesis: Optional[str] = None,
-    active: bool = False,
+    status: str = "candidate",
     backtest: Optional[dict] = None,
     conn=None,
 ) -> None:
+    """Insert (or update) a strategy version row.
+
+    `status="active"` is only ever passed for the baseline version
+    (`get_active_params` seeding an empty database) or by the migration
+    backfill in `evaluation/db.py`. Every version the weekly improvement
+    loop proposes is saved with `status="candidate"` and `active=0` --
+    activation is a separate, explicit step (`activate_version`) that only
+    `scripts/process_telegram_approvals.py` calls, after a human approves
+    it. Nothing here activates a version on backtest results alone.
+    """
     owns_conn = conn is None
     conn = conn or connect()
     try:
+        active = status == "active"
         conn.execute(
             """
             INSERT INTO strategy_versions
-                (version, parent_version, params_json, hypothesis, created_at, active, backtest_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (version, parent_version, params_json, hypothesis, created_at,
+                 active, backtest_json, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(version) DO UPDATE SET
                 active = excluded.active,
-                backtest_json = excluded.backtest_json
+                backtest_json = excluded.backtest_json,
+                status = excluded.status
             """,
             (
                 params.version,
@@ -144,12 +163,88 @@ def save_version(
                 datetime.now(timezone.utc).isoformat(),
                 int(active),
                 json.dumps(backtest) if backtest is not None else None,
+                status,
             ),
         )
         if active:
             conn.execute(
                 "UPDATE strategy_versions SET active = 0 WHERE version != ?", (params.version,)
             )
+        conn.commit()
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def record_telegram_message(version: str, chat_id, message_id: int, conn=None) -> None:
+    """Remember which Telegram message carries a candidate's approval buttons."""
+    owns_conn = conn is None
+    conn = conn or connect()
+    try:
+        conn.execute(
+            "UPDATE strategy_versions SET telegram_chat_id = ?, telegram_message_id = ? WHERE version = ?",
+            (str(chat_id), message_id, version),
+        )
+        conn.commit()
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def get_version(version: str, conn=None) -> Optional[sqlite3.Row]:
+    owns_conn = conn is None
+    conn = conn or connect()
+    try:
+        return conn.execute(
+            "SELECT * FROM strategy_versions WHERE version = ?", (version,)
+        ).fetchone()
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def pending_candidates(conn=None) -> list[sqlite3.Row]:
+    owns_conn = conn is None
+    conn = conn or connect()
+    try:
+        return conn.execute(
+            "SELECT * FROM strategy_versions WHERE status = 'candidate' ORDER BY created_at"
+        ).fetchall()
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def activate_version(version: str, conn=None) -> None:
+    """Human-approval path: make `version` the live one. Never called automatically."""
+    owns_conn = conn is None
+    conn = conn or connect()
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        conn.execute("UPDATE strategy_versions SET active = 0")
+        conn.execute(
+            "UPDATE strategy_versions SET active = 1, status = 'active', decided_at = ? WHERE version = ?",
+            (now, version),
+        )
+        conn.commit()
+    finally:
+        if owns_conn:
+            conn.close()
+
+
+def reject_version(version: str, conn=None) -> None:
+    """Human-rejection path (or a no-response candidate left as-is forever): mark it rejected.
+
+    Never touches `active` -- whatever version was live stays live.
+    """
+    owns_conn = conn is None
+    conn = conn or connect()
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            "UPDATE strategy_versions SET status = 'rejected', decided_at = ? WHERE version = ?",
+            (now, version),
+        )
         conn.commit()
     finally:
         if owns_conn:
@@ -164,7 +259,7 @@ def get_active_params(conn=None) -> StrategyParams:
             "SELECT version, params_json FROM strategy_versions WHERE active = 1"
         ).fetchone()
         if row is None:
-            save_version(BASELINE_PARAMS, active=True, conn=conn)
+            save_version(BASELINE_PARAMS, status="active", conn=conn)
             return BASELINE_PARAMS
         return StrategyParams.from_json(row["version"], row["params_json"])
     finally:

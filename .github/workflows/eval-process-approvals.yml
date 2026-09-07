@@ -1,0 +1,64 @@
+name: Evaluation loop (process approvals)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Every 10 minutes -- short-polls Telegram for approve/reject taps on
+    # candidate strategy versions (see scripts/process_telegram_approvals.py).
+    - cron: "*/10 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: db-write
+  cancel-in-progress: false
+
+jobs:
+  process-approvals:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Process pending Telegram approve/reject taps
+        run: python scripts/process_telegram_approvals.py
+
+      - name: Commit and push evaluation database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/evaluation.db
+          if git diff --cached --quiet; then
+            echo "No approval changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: apply strategy version approval decision"
+          # Fetch + rebase + retry for the ordinary race of another run's
+          # commit landing first. A real conflict (two runs touching the
+          # same bytes of the .db file) aborts the rebase and fails the
+          # job instead of forcing a resolution that could silently
+          # overwrite data.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt/3), fetching latest main and rebasing..."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              echo "::error::Rebase conflict on evaluation database -- aborting rather than overwriting. Investigate manually."
+              git rebase --abort
+              exit 1
+            fi
+          done
+          echo "::error::Failed to push evaluation database after 3 attempts."
+          exit 1

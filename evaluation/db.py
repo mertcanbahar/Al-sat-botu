@@ -1,11 +1,20 @@
 """SQLite schema and connection helper for the evaluation loop.
 
-Four tables:
+Five tables:
   signals           -- one row per symbol per evaluation cycle (A).
   outcomes          -- forward-looking price marks for each signal (A).
   paper_trades      -- the 10k-TL paper portfolio's fills (B).
   strategy_versions -- the parameter-version registry the weekly
-                        improvement loop (D) reads and writes.
+                        improvement loop (D) reads and writes. A new
+                        version is written with status='candidate' and
+                        active=0 -- only a human approving it via Telegram
+                        (see evaluation/strategy.py:activate_version and
+                        scripts/process_telegram_approvals.py) flips it to
+                        status='active'/active=1. Nothing in this codebase
+                        activates a version on its own.
+  telegram_offset   -- single-row cursor into Telegram's getUpdates, so
+                        the approval-polling job never reprocesses a
+                        button press it already handled.
 
 `connect()` opens (creating if needed) `alsatbotu.config.EVAL_DB_PATH` with
 the schema applied; every script in this package calls it rather than
@@ -69,9 +78,44 @@ CREATE TABLE IF NOT EXISTS strategy_versions (
     hypothesis TEXT,
     created_at TEXT NOT NULL,
     active INTEGER NOT NULL DEFAULT 0,
-    backtest_json TEXT
+    backtest_json TEXT,
+    status TEXT NOT NULL DEFAULT 'candidate',
+    telegram_chat_id TEXT,
+    telegram_message_id INTEGER,
+    decided_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS telegram_offset (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    last_update_id INTEGER NOT NULL DEFAULT 0
 );
 """
+
+# Columns added after the initial release, for databases created before
+# this migration existed. ALTER TABLE ADD COLUMN is idempotent-guarded by
+# catching sqlite3's "duplicate column" error rather than checking
+# PRAGMA table_info first, since that's what every existing evaluation.db
+# in git history needs applied exactly once.
+_MIGRATIONS = [
+    "ALTER TABLE strategy_versions ADD COLUMN status TEXT NOT NULL DEFAULT 'candidate'",
+    "ALTER TABLE strategy_versions ADD COLUMN telegram_chat_id TEXT",
+    "ALTER TABLE strategy_versions ADD COLUMN telegram_message_id INTEGER",
+    "ALTER TABLE strategy_versions ADD COLUMN decided_at TEXT",
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for statement in _MIGRATIONS:
+        try:
+            conn.execute(statement)
+        except sqlite3.OperationalError as exc:
+            if "duplicate column" not in str(exc):
+                raise
+    # A version created before `status` existed was, by definition, the
+    # one already live -- backfill it to 'active' rather than leaving it
+    # at the new default of 'candidate'.
+    conn.execute("UPDATE strategy_versions SET status = 'active' WHERE active = 1")
+    conn.commit()
 
 
 def connect(path: Path = EVAL_DB_PATH) -> sqlite3.Connection:
@@ -82,4 +126,5 @@ def connect(path: Path = EVAL_DB_PATH) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
