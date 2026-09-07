@@ -39,7 +39,36 @@ Gerçek veriyle aynı süpürme: Actions → **Manual drawdown-halt threshold sw
 
 ## 1) Eşik tek başına: %20 / %25 / %30 / %35
 
-<!-- ESIK_TABLOSU -->
+4 tohum, izole hesaplar, **mandal modunda** (histerezis kapalı) — yani orijinal
+sorunun sorulduğu haliyle:
+
+| Metrik | %20 | %25 | %30 | %35 |
+|---|---|---|---|---|
+| **Sonda kilitli hesap** | **5.5/20** (3–8) | 1 (1–3) | 0 (0–1) | **0** |
+| Halt tetiklenme | 5.5 (3–8) | 1 (1–3) | 0 (0–1) | **0** |
+| Engellenen ALIM sinyali | 388 (266–733) | 45.5 (1–256) | 0 (0–11) | **0** |
+| Halt gün oranı | 6.84% | 0.99% | 0.00% | **0.00%** |
+| Toplam getiri (20 hesap) | 6.12% | 6.47% | 7.15% | 7.21% |
+| En kötü hesap DD | -22.79% | -25.35% | -27.14% | -27.14% |
+
+Okunuşu: **%20 kilitliyor** (20 hesabın 5–8'i pencere sonuna kadar alım
+yapamıyor), **%35 hiç tetiklenmiyor** (dört tohumun hiçbirinde tek bir kez
+bile), **%30 pratikte etkisiz** (medyan sıfır tetiklenme; %35 ile aynı getiri
+ve aynı drawdown). Geriye tek aday olarak **%25** kalıyor: kural hâlâ gerçek
+sinyalleri engelliyor (medyan 45) ama kilitlenme 5.5'ten 1 hesaba düşüyor.
+
+Yine de %25 sorunu *çözmüyor*, sadece küçültüyor: dört tohumun hepsinde en az
+bir hesap pencere sonunda kilitli kalıyor. Eşik büyütmek kilitlenmeyi ortadan
+kaldırmıyor, kuralı etkisizleştirene kadar seyrekleştiriyor. Aynı tablo
+histerezisli mekanizmayla koşulduğunda **her eşikte** kilitli hesap sıfıra
+iniyor — asıl fark eşikten değil mekanizmadan geliyor.
+
+> **Önceki rapordan düzeltme:** bozuk üreteçle koşan ilk tabloda "%25'te hiç
+> kilitlenme yok" ve "%30 hiç tetiklenmiyor" yazıyordu. Düzeltilmiş üreteçle
+> %25 dört tohumun hepsinde 1–3 hesabı kilitliyor ve %30 bazı tohumlarda
+> tetikleniyor. Yön aynı kaldı, rakamlar değişti — tek çekilişe güvenmemenin
+> sebebi tam olarak bu.
+
 
 ## 2) Mekanizma: mandal vs. histerezis + kısmi reset
 
