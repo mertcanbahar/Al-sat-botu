@@ -1,0 +1,62 @@
+name: Manual drawdown-halt threshold sweep
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Years of daily history to backtest"
+        required: false
+        default: "5"
+      thresholds:
+        description: "Space-separated halt thresholds to compare (fractions, e.g. '0.20 0.25 0.30 0.35')"
+        required: false
+        default: "0.20 0.25 0.30 0.35"
+
+permissions:
+  contents: write
+
+jobs:
+  halt-sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sweep drawdown-halt thresholds on real data
+        run: |
+          python backtest/halt_sweep.py \
+            --years "${{ inputs.years || '5' }}" \
+            --thresholds ${{ inputs.thresholds || '0.20 0.25 0.30 0.35' }} \
+            --out-dir backtest/results
+
+      - name: Commit and push sweep results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/halt_sweep.md backtest/results/halt_sweep.json
+          if git diff --cached --quiet; then
+            echo "No sweep changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: update drawdown-halt threshold sweep"
+          # Same race as the portfolio backtest: this job spends minutes
+          # fetching data before it commits, so main can move underneath it.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::Failed to push sweep results after 5 attempts."
+          exit 1
