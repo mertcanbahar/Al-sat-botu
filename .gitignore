@@ -219,3 +219,11 @@ __marimo__/
 
 # Al-sat-botu disk cache
 .cache/
+
+# GitHub Pages dashboard build output. Generated from data/ inside
+# .github/workflows/pages.yml at deploy time -- data/ is the single
+# source of truth, this is not a second manually-synced copy.
+docs/watchlist.json
+docs/data/*.json
+docs/data/*.jsonl
+!docs/data/.gitkeep
