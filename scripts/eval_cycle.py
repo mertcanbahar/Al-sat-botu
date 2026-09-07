@@ -4,7 +4,7 @@
 For each symbol in `alsatbotu.config.WATCHLIST`:
   1. Fetch price history and evaluate the *active* strategy version
      (evaluation.strategy.evaluate_versioned -- same rules as
-     alsatbotu.rules.evaluate, but with tunable thresholds).
+     alsatbotu.signal.evaluate, but with tunable thresholds).
   2. Log the signal (evaluation/logger.py -> `signals` table).
   3. Check the symbol's open paper trade (if any) against its ATR
      stop-loss / take-profit.
@@ -35,7 +35,7 @@ from evaluation.db import connect
 from evaluation.logger import log_signal
 from evaluation.paper_engine import check_exits, close_trade, get_open_trade, open_trade
 from evaluation.strategy import evaluate_versioned, get_active_params
-from alsatbotu.rules import Signal
+from alsatbotu.signal import Signal
 
 
 def run(days: int = 60) -> None:
