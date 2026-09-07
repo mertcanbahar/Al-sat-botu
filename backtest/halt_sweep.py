@@ -470,9 +470,10 @@ def write_comparison_markdown(
                 _num(summary[n]["isolated"]["state_days"][state], 1) for n in staged_names
             )
             lines.append(f"| {state} | {capacity} | {cells} |")
-        lines.append("")
+        # Aynı tablonun son satırı: araya boş satır girerse Markdown tabloyu
+        # burada kesip bu satırı ayrı (ve bozuk) bir tablo olarak basıyor.
         lines.append(
-            "| Güvenlik ağının açık olduğu gün | — | "
+            "| **Güvenlik ağının açık olduğu gün** | — | "
             + " | ".join(_num(summary[n]["isolated"]["recovery_net_days"], 1) for n in staged_names)
             + " |"
         )

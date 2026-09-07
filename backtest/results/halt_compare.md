@@ -1,6 +1,6 @@
 # Halt mekanizması: legacy sabit %20 mandal vs kademeli durum makinesi
 
-Üretim zamanı: 2026-09-07T15:13:25.257418Z
+Üretim zamanı: 2026-09-07T16:16:08.821586Z
 
 Gerçek Twelve Data günlük verisi, 5 yıl, 20 sembol. Tek veri seti olduğu için tohum ortalaması yok.
 
@@ -40,8 +40,7 @@ Gerçek Twelve Data günlük verisi, 5 yıl, 20 sembol. Tek veri seti olduğu i�
 | CAUTION | 75% | 6436.0 | 6436.0 |
 | DEFENSIVE | 50% | 6226.0 | 6226.0 |
 | HALT | 0% → ağ açılırsa 25% | 0.0 | 0.0 |
-
-| Güvenlik ağının açık olduğu gün | — | 0.0 | 0.0 |
+| **Güvenlik ağının açık olduğu gün** | — | 0.0 | 0.0 |
 
 ## Nasıl okunmalı
 
