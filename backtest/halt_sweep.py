@@ -184,7 +184,7 @@ def policy_label(policy: HaltPolicy) -> str:
         return f"H%{policy.halt_pct * 100:.0f} / mandal"
     return (
         f"H%{policy.halt_pct * 100:.0f} → R%{policy.release_pct * 100:.0f} "
-        f"/ reset {policy.reset_after_marks}g"
+        f"/ reset {policy.reset_after_marks}g×{policy.reset_fraction:g}"
     )
 
 
@@ -350,6 +350,17 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             "beklediği. Pratikte halt'ı asıl bırakan mekanizma budur."
         ),
     )
+    parser.add_argument(
+        "--reset-fractions",
+        type=float,
+        nargs="+",
+        default=[HaltPolicy().reset_fraction],
+        help=(
+            "Kısmi reset'te peak'in equity'ye ne kadar çekildiği. 0 = tam reset "
+            "(koruma sıfırlanır), 1 = hiç çekme. Düşük değer daha çabuk devam, "
+            "yüksek değer daha erken yeniden halt demektir."
+        ),
+    )
     parser.add_argument("--seeds", type=int, default=1, help="Kaç farklı sentetik veri kümesi")
     parser.add_argument("--no-portfolio", action="store_true", help="Sadece izole hesaplar (hızlı)")
     parser.add_argument("--synthetic", action="store_true")
@@ -368,10 +379,12 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             halt_pct=h,
             release_pct=None if r == "none" else float(r),
             reset_after_marks=n,
+            reset_fraction=f,
         )
         for h in args.thresholds
         for r in args.release_pcts
         for n in args.reset_after_marks
+        for f in args.reset_fractions
     ]
 
     seeds = list(range(42, 42 + args.seeds)) if args.synthetic else [None]
