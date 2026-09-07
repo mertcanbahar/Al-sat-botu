@@ -9,12 +9,20 @@ Rules:
   - No single category (see `alsatbotu.config.SYMBOL_CATEGORIES`) may hold
     more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity.
   - At most `MAX_OPEN_POSITIONS` (8) positions open at once.
-  - No new BUYs once equity has drawn down more than `MAX_DRAWDOWN_PCT`
-    (20%) from its peak; existing positions may still be sold.
+  - Drawdown from the equity high-water mark limits how much of the
+    risk-sized position may actually be taken. Two mechanisms exist:
+
+      * Legacy (default): a single latch at `MAX_DRAWDOWN_PCT` (20%). No new
+        BUYs past it; existing positions may still be sold.
+      * Graduated (`policy=`): the four-state machine in `engine/halt.py`,
+        which scales the position down (100/75/50%) before it stops buying
+        and can release itself again. Opt-in per call, so the live runner
+        keeps the legacy behaviour until it is switched over deliberately.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from alsatbotu.config import (
     CATEGORY_EXPOSURE_LIMIT_PCT,
@@ -23,6 +31,7 @@ from alsatbotu.config import (
     RISK_PER_TRADE_PCT,
 )
 from alsatbotu.signal import ATR_STOP_MULTIPLIER
+from engine.halt import DateLike, HaltAssessment, HaltPolicy, assess, state_from_name
 from portfolio.state import PortfolioState
 
 
@@ -61,6 +70,31 @@ class RiskDecision:
     quantity: float = 0.0
     stop_price: float = 0.0
     capped_by: str | None = None
+    # Only set when `evaluate_buy` ran with a graduated `policy`.
+    halt: Optional[HaltAssessment] = None
+
+
+def assess_halt(
+    state: PortfolioState,
+    equity: float,
+    policy: HaltPolicy,
+    today: Optional[DateLike] = None,
+) -> HaltAssessment:
+    """Run the state machine against live equity and the recorded posture.
+
+    Deliberately re-derived rather than read straight off `state.halt_state`:
+    a deepening drawdown then takes effect on the mark it happens, not on the
+    next time someone remembers to call `update_halt_state()`. The recorded
+    state still matters -- it carries the hysteresis and the HALT clock.
+    """
+    return assess(
+        equity=equity,
+        high_water_mark=state.peak_equity,
+        previous_state=state_from_name(state.halt_state),
+        halt_since=state.halt_since,
+        today=today,
+        policy=policy,
+    )
 
 
 def evaluate_buy(
@@ -71,26 +105,42 @@ def evaluate_buy(
     atr: float,
     current_prices: dict[str, float],
     max_drawdown_pct: float | None = None,
+    policy: Optional[HaltPolicy] = None,
+    today: Optional[DateLike] = None,
 ) -> RiskDecision:
     """Decide whether to open a new position and, if so, at what size.
 
-    Available cash and the category exposure cap *size down* the position
-    rather than veto it: the 2%-risk quantity is what the trade would like
-    to be, and the limits are the room it actually has. Only a limit with
-    no room left at all (or a blocked portfolio) rejects the trade.
+    Available cash, the category exposure cap and -- with a graduated
+    `policy` -- the drawdown state's capacity *size down* the position rather
+    than veto it: the 2%-risk quantity is what the trade would like to be,
+    and the limits are the room it actually has. Only a limit with no room
+    left at all (or a blocked portfolio) rejects the trade.
+
+    `policy` selects the drawdown mechanism. Left as None the legacy latch at
+    `max_drawdown_pct` (default `MAX_DRAWDOWN_PCT`) applies, unchanged. Given
+    a `HaltPolicy`, the four-state machine applies instead and
+    `max_drawdown_pct` is ignored -- the two are alternatives, not layers.
     """
     equity = state.equity(current_prices)
     reasons: list[str] = []
+    halt: Optional[HaltAssessment] = None
 
     if symbol in state.open_positions:
         reasons.append(f"Position already open for {symbol}")
 
-    halt_threshold = MAX_DRAWDOWN_PCT if max_drawdown_pct is None else max_drawdown_pct
-    if is_drawdown_halted(equity, state.peak_equity, halt_threshold):
-        reasons.append(
-            f"Drawdown halt: equity {equity:.2f} is more than "
-            f"{halt_threshold * 100:.0f}% below peak {state.peak_equity:.2f}"
-        )
+    if policy is None:
+        halt_threshold = MAX_DRAWDOWN_PCT if max_drawdown_pct is None else max_drawdown_pct
+        if is_drawdown_halted(equity, state.peak_equity, halt_threshold):
+            reasons.append(
+                f"Drawdown halt: equity {equity:.2f} is more than "
+                f"{halt_threshold * 100:.0f}% below peak {state.peak_equity:.2f}"
+            )
+    else:
+        halt = assess_halt(state, equity, policy, today)
+        if halt.blocks_new_buys:
+            # The "Drawdown halt" prefix is load-bearing: backtest/halt_sweep.py
+            # counts blocked BUY signals by matching it.
+            reasons.append(f"Drawdown halt: {halt.reason}")
 
     if len(state.open_positions) >= MAX_OPEN_POSITIONS:
         reasons.append(f"Max open positions reached ({MAX_OPEN_POSITIONS})")
@@ -99,7 +149,7 @@ def evaluate_buy(
         reasons.append("No valid ATR available to size a stop")
 
     if reasons:
-        return RiskDecision(approved=False, reasons=reasons)
+        return RiskDecision(approved=False, reasons=reasons, halt=halt)
 
     stop_price = compute_atr_stop(entry_price, atr)
     quantity = compute_position_size(equity, entry_price, stop_price)
@@ -108,6 +158,7 @@ def evaluate_buy(
             approved=False,
             reasons=["Computed position size is zero (stop not below entry)"],
             stop_price=stop_price,
+            halt=halt,
         )
 
     category_room = (
@@ -119,6 +170,12 @@ def evaluate_buy(
             max(category_room, 0.0) / entry_price
         ),
     }
+    if halt is not None and halt.capacity < 1.0:
+        # A capacity cut scales the risk-sized quantity itself, so it reads as
+        # "half a normal position", independent of price or available cash.
+        limits[f"drawdown state {halt.state.name} ({halt.capacity * 100:.0f}% capacity)"] = (
+            quantity * halt.capacity
+        )
 
     capped_by = None
     for label, max_quantity in limits.items():
@@ -131,8 +188,13 @@ def evaluate_buy(
             approved=False,
             reasons=[f"No room to open a position: {capped_by} is exhausted"],
             stop_price=stop_price,
+            halt=halt,
         )
 
     return RiskDecision(
-        approved=True, quantity=quantity, stop_price=stop_price, capped_by=capped_by
+        approved=True,
+        quantity=quantity,
+        stop_price=stop_price,
+        capped_by=capped_by,
+        halt=halt,
     )

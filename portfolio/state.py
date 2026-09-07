@@ -13,7 +13,16 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from alsatbotu.config import PORTFOLIO_STATE_PATH, STARTING_CAPITAL
+from alsatbotu.config import DEFAULT_HALT_POLICY, PORTFOLIO_STATE_PATH, STARTING_CAPITAL
+from engine.halt import (
+    DateLike,
+    HaltAssessment,
+    HaltPolicy,
+    HaltState,
+    assess,
+    state_from_name,
+    update_high_water_mark,
+)
 
 
 @dataclass
@@ -44,9 +53,22 @@ class ClosedTrade:
 class PortfolioState:
     cash: float
     starting_capital: float
+    # Highest equity ever marked (the high-water mark). Kept under its
+    # original name because `docs/index.html` reads `peak_equity` straight
+    # out of the saved JSON; `high_water_mark` below is the same number under
+    # the name the drawdown formula uses.
     peak_equity: float
     open_positions: dict[str, Position] = field(default_factory=dict)
     closed_trades: list[ClosedTrade] = field(default_factory=list)
+    # Drawdown state machine (engine/halt.py). Persisted as a plain name and
+    # ISO date so state files stay readable and older files, which have
+    # neither key, load as a book that has never been in trouble.
+    halt_state: str = HaltState.NORMAL.name
+    halt_since: Optional[str] = None
+
+    @property
+    def high_water_mark(self) -> float:
+        return self.peak_equity
 
     def position_value(self, current_prices: dict[str, float]) -> float:
         return sum(
@@ -89,6 +111,9 @@ def load_state(path: Path = PORTFOLIO_STATE_PATH) -> PortfolioState:
             symbol: Position(**data) for symbol, data in raw.get("open_positions", {}).items()
         },
         closed_trades=[ClosedTrade(**data) for data in raw.get("closed_trades", [])],
+        # Absent in every state file written before the state machine existed.
+        halt_state=raw.get("halt_state", HaltState.NORMAL.name),
+        halt_since=raw.get("halt_since"),
     )
 
 
@@ -105,6 +130,8 @@ def save_state(state: PortfolioState, path: Path = PORTFOLIO_STATE_PATH) -> None
             symbol: asdict(position) for symbol, position in state.open_positions.items()
         },
         "closed_trades": [asdict(trade) for trade in state.closed_trades],
+        "halt_state": state.halt_state,
+        "halt_since": state.halt_since,
     }
 
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -117,8 +144,36 @@ def save_state(state: PortfolioState, path: Path = PORTFOLIO_STATE_PATH) -> None
 def update_peak_equity(state: PortfolioState, current_prices: dict[str, float]) -> float:
     """Update and return `state.peak_equity` given the latest equity mark."""
     equity = state.equity(current_prices)
-    state.peak_equity = max(state.peak_equity, equity)
+    state.peak_equity = update_high_water_mark(state.peak_equity, equity)
     return equity
+
+
+def update_halt_state(
+    state: PortfolioState,
+    equity: float,
+    today: Optional[DateLike] = None,
+    policy: Optional[HaltPolicy] = None,
+) -> HaltAssessment:
+    """Advance the drawdown state machine one mark and record the result.
+
+    Call this once per equity mark, right after `update_peak_equity()`, so the
+    HALT clock advances on calendar days and the recorded state reflects the
+    latest close. `engine.risk.evaluate_buy()` re-derives the state from live
+    equity rather than trusting this field, so a caller that skips this step
+    still gets correct sizing -- it just loses the persisted clock, which is
+    what the time-based safety net runs on.
+    """
+    assessment = assess(
+        equity=equity,
+        high_water_mark=state.peak_equity,
+        previous_state=state_from_name(state.halt_state),
+        halt_since=state.halt_since,
+        today=today,
+        policy=policy or DEFAULT_HALT_POLICY,
+    )
+    state.halt_state = assessment.state.name
+    state.halt_since = assessment.halt_since_iso
+    return assessment
 
 
 def open_position(
