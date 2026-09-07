@@ -499,6 +499,532 @@
         }
       ]
     },
+    "v1 + taban %30": {
+      "seeds": 8,
+      "portfolio": {
+        "total_return_pct": 0.19682990290489347,
+        "cagr_pct": 0.030473566789409698,
+        "max_drawdown_pct": -0.25041320744802176,
+        "sharpe": 0.1871049643562127
+      },
+      "portfolio_locked_runs": 2,
+      "portfolio_halt_days_pct": 0.12562500000000001,
+      "portfolio_trades": 311.125,
+      "isolated": {
+        "aggregate_total_return_pct": 0.0367383277078881,
+        "accounts_locked_at_end": 0.0,
+        "accounts_ever_halted": 4.875,
+        "worst_account_max_dd": -0.23208823304520748,
+        "worst_account_max_dd_across_seeds": -0.2559282747646921,
+        "median_account_max_dd": -0.16548530514070384,
+        "total_trades": 524.0,
+        "total_blocked_buy_signals": 3.375,
+        "recovery_net_days": 1357.25,
+        "state_days": {
+          "NORMAL": 13733.25,
+          "CAUTION": 5091.0,
+          "DEFENSIVE": 3769.75,
+          "HALT": 1406.0
+        }
+      },
+      "runs": [
+        {
+          "portfolio": {
+            "total_return_pct": 0.13091672917083974,
+            "cagr_pct": 0.027157807872319806,
+            "max_drawdown_pct": -0.2165857841113694,
+            "sharpe": 0.2550555685012587,
+            "trade_count": 328,
+            "halt_days_pct": 0.008333333333333333,
+            "locked_at_end": false,
+            "blocked_buy_signals": 17
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.034287149591221144,
+            "accounts": 20,
+            "accounts_ever_halted": 4,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.24458754177936334,
+            "median_account_max_dd": -0.15791500482294119,
+            "total_trades": 510,
+            "total_blocked_buy_signals": 13,
+            "state_days": {
+              "NORMAL": 13995,
+              "CAUTION": 5010,
+              "DEFENSIVE": 3717,
+              "HALT": 1278
+            },
+            "recovery_net_days": 1238
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": -0.25326362827816074,
+            "cagr_pct": -0.06162617629250067,
+            "max_drawdown_pct": -0.3064315027463686,
+            "sharpe": -0.5337316400376159,
+            "trade_count": 260,
+            "halt_days_pct": 0.33916666666666667,
+            "locked_at_end": true,
+            "blocked_buy_signals": 1533
+          },
+          "isolated": {
+            "aggregate_total_return_pct": -0.018652814378904203,
+            "accounts": 20,
+            "accounts_ever_halted": 9,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2300512992029074,
+            "median_account_max_dd": -0.18817248995237626,
+            "total_trades": 488,
+            "total_blocked_buy_signals": 2,
+            "state_days": {
+              "NORMAL": 11842,
+              "CAUTION": 3799,
+              "DEFENSIVE": 4869,
+              "HALT": 3490
+            },
+            "recovery_net_days": 3400
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 0.3634132931017491,
+            "cagr_pct": 0.06984737780539296,
+            "max_drawdown_pct": -0.19388941889744538,
+            "sharpe": 0.5576083760968559,
+            "trade_count": 353,
+            "halt_days_pct": 0.0,
+            "locked_at_end": false,
+            "blocked_buy_signals": 0
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.0943367771198993,
+            "accounts": 20,
+            "accounts_ever_halted": 3,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2275889922433304,
+            "median_account_max_dd": -0.16172729400402144,
+            "total_trades": 548,
+            "total_blocked_buy_signals": 0,
+            "state_days": {
+              "NORMAL": 15257,
+              "CAUTION": 3857,
+              "DEFENSIVE": 3646,
+              "HALT": 1240
+            },
+            "recovery_net_days": 1210
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": -0.30685088181561715,
+            "cagr_pct": -0.0767228088577323,
+            "max_drawdown_pct": -0.32211121363847145,
+            "sharpe": -0.9407994845699266,
+            "trade_count": 167,
+            "halt_days_pct": 0.5916666666666667,
+            "locked_at_end": true,
+            "blocked_buy_signals": 3491
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.00025897222531146014,
+            "accounts": 20,
+            "accounts_ever_halted": 6,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2559282747646921,
+            "median_account_max_dd": -0.17152606674232612,
+            "total_trades": 559,
+            "total_blocked_buy_signals": 5,
+            "state_days": {
+              "NORMAL": 12922,
+              "CAUTION": 5147,
+              "DEFENSIVE": 3920,
+              "HALT": 2011
+            },
+            "recovery_net_days": 1951
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 0.09108939598353105,
+            "cagr_pct": 0.019168441792202007,
+            "max_drawdown_pct": -0.2572396384807702,
+            "sharpe": 0.20121669172174153,
+            "trade_count": 343,
+            "halt_days_pct": 0.016666666666666666,
+            "locked_at_end": false,
+            "blocked_buy_signals": 21
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.013610111003342196,
+            "accounts": 20,
+            "accounts_ever_halted": 6,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.24546242187848397,
+            "median_account_max_dd": -0.1723451546481815,
+            "total_trades": 526,
+            "total_blocked_buy_signals": 1,
+            "state_days": {
+              "NORMAL": 12359,
+              "CAUTION": 5888,
+              "DEFENSIVE": 4699,
+              "HALT": 1054
+            },
+            "recovery_net_days": 994
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 0.11522189038483122,
+            "cagr_pct": 0.02403610963622449,
+            "max_drawdown_pct": -0.25304510193180973,
+            "sharpe": 0.24617210000384696,
+            "trade_count": 350,
+            "halt_days_pct": 0.0325,
+            "locked_at_end": false,
+            "blocked_buy_signals": 65
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.02937521856198777,
+            "accounts": 20,
+            "accounts_ever_halted": 4,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.21952317624226583,
+            "median_account_max_dd": -0.17173940130558704,
+            "total_trades": 518,
+            "total_blocked_buy_signals": 0,
+            "state_days": {
+              "NORMAL": 13002,
+              "CAUTION": 6765,
+              "DEFENSIVE": 3807,
+              "HALT": 426
+            },
+            "recovery_net_days": 386
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 1.0645696617899851,
+            "cagr_pct": 0.17103469244856506,
+            "max_drawdown_pct": -0.19252356536962376,
+            "sharpe": 1.1346960113167492,
+            "trade_count": 337,
+            "halt_days_pct": 0.0,
+            "locked_at_end": false,
+            "blocked_buy_signals": 0
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.08398572438473018,
+            "accounts": 20,
+            "accounts_ever_halted": 4,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2165120288076116,
+            "median_account_max_dd": -0.14163146403870286,
+            "total_trades": 510,
+            "total_blocked_buy_signals": 6,
+            "state_days": {
+              "NORMAL": 15584,
+              "CAUTION": 5662,
+              "DEFENSIVE": 1802,
+              "HALT": 952
+            },
+            "recovery_net_days": 912
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 0.3695427629019894,
+            "cagr_pct": 0.07089308991080623,
+            "max_drawdown_pct": -0.2614794344083158,
+            "sharpe": 0.5766220918167919,
+            "trade_count": 351,
+            "halt_days_pct": 0.016666666666666666,
+            "locked_at_end": false,
+            "blocked_buy_signals": 53
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.056705483155516934,
+            "accounts": 20,
+            "accounts_ever_halted": 3,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2170521294430052,
+            "median_account_max_dd": -0.15882556561149425,
+            "total_trades": 533,
+            "total_blocked_buy_signals": 0,
+            "state_days": {
+              "NORMAL": 14905,
+              "CAUTION": 4600,
+              "DEFENSIVE": 3698,
+              "HALT": 797
+            },
+            "recovery_net_days": 767
+          }
+        }
+      ]
+    },
+    "v1 + taban %25": {
+      "seeds": 8,
+      "portfolio": {
+        "total_return_pct": 0.13226807450062372,
+        "cagr_pct": 0.018276407908879952,
+        "max_drawdown_pct": -0.23974119670748079,
+        "sharpe": 0.08366366398828821
+      },
+      "portfolio_locked_runs": 5,
+      "portfolio_halt_days_pct": 0.31166666666666665,
+      "portfolio_trades": 239.875,
+      "isolated": {
+        "aggregate_total_return_pct": 0.03674423405426014,
+        "accounts_locked_at_end": 0.125,
+        "accounts_ever_halted": 4.875,
+        "worst_account_max_dd": -0.23138504129770962,
+        "worst_account_max_dd_across_seeds": -0.25030274078470915,
+        "median_account_max_dd": -0.16548530514070384,
+        "total_trades": 523.75,
+        "total_blocked_buy_signals": 6.625,
+        "recovery_net_days": 1330.375,
+        "state_days": {
+          "NORMAL": 13733.25,
+          "CAUTION": 5091.0,
+          "DEFENSIVE": 3769.75,
+          "HALT": 1406.0
+        }
+      },
+      "runs": [
+        {
+          "portfolio": {
+            "total_return_pct": 0.13091672917083974,
+            "cagr_pct": 0.027157807872319806,
+            "max_drawdown_pct": -0.2165857841113694,
+            "sharpe": 0.2550555685012587,
+            "trade_count": 328,
+            "halt_days_pct": 0.008333333333333333,
+            "locked_at_end": false,
+            "blocked_buy_signals": 17
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.034287149591221144,
+            "accounts": 20,
+            "accounts_ever_halted": 4,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.24458754177936334,
+            "median_account_max_dd": -0.15791500482294119,
+            "total_trades": 510,
+            "total_blocked_buy_signals": 13,
+            "state_days": {
+              "NORMAL": 13995,
+              "CAUTION": 5010,
+              "DEFENSIVE": 3717,
+              "HALT": 1278
+            },
+            "recovery_net_days": 1238
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": -0.22713128569219942,
+            "cagr_pct": -0.05456980750014162,
+            "max_drawdown_pct": -0.27552042787320635,
+            "sharpe": -0.47614217499834227,
+            "trade_count": 239,
+            "halt_days_pct": 0.385,
+            "locked_at_end": true,
+            "blocked_buy_signals": 1743
+          },
+          "isolated": {
+            "aggregate_total_return_pct": -0.018652814378904203,
+            "accounts": 20,
+            "accounts_ever_halted": 9,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2300512992029074,
+            "median_account_max_dd": -0.18817248995237626,
+            "total_trades": 488,
+            "total_blocked_buy_signals": 2,
+            "state_days": {
+              "NORMAL": 11842,
+              "CAUTION": 3799,
+              "DEFENSIVE": 4869,
+              "HALT": 3490
+            },
+            "recovery_net_days": 3400
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 0.3634132931017491,
+            "cagr_pct": 0.06984737780539296,
+            "max_drawdown_pct": -0.19388941889744538,
+            "sharpe": 0.5576083760968559,
+            "trade_count": 353,
+            "halt_days_pct": 0.0,
+            "locked_at_end": false,
+            "blocked_buy_signals": 0
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.0943367771198993,
+            "accounts": 20,
+            "accounts_ever_halted": 3,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2275889922433304,
+            "median_account_max_dd": -0.16172729400402144,
+            "total_trades": 548,
+            "total_blocked_buy_signals": 0,
+            "state_days": {
+              "NORMAL": 15257,
+              "CAUTION": 3857,
+              "DEFENSIVE": 3646,
+              "HALT": 1240
+            },
+            "recovery_net_days": 1210
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": -0.2411971056048593,
+            "cagr_pct": -0.0583443111322961,
+            "max_drawdown_pct": -0.267999638974494,
+            "sharpe": -0.775197556228239,
+            "trade_count": 99,
+            "halt_days_pct": 0.725,
+            "locked_at_end": true,
+            "blocked_buy_signals": 4154
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.00030622299628779714,
+            "accounts": 20,
+            "accounts_ever_halted": 6,
+            "accounts_locked_at_end": 1,
+            "worst_account_max_dd": -0.25030274078470915,
+            "median_account_max_dd": -0.17152606674232612,
+            "total_trades": 557,
+            "total_blocked_buy_signals": 31,
+            "state_days": {
+              "NORMAL": 12922,
+              "CAUTION": 5147,
+              "DEFENSIVE": 3920,
+              "HALT": 2011
+            },
+            "recovery_net_days": 1736
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 0.08636818404480384,
+            "cagr_pct": 0.01820631452117971,
+            "max_drawdown_pct": -0.2566199536049731,
+            "sharpe": 0.19468428107354463,
+            "trade_count": 343,
+            "halt_days_pct": 0.02,
+            "locked_at_end": true,
+            "blocked_buy_signals": 24
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.013610111003342196,
+            "accounts": 20,
+            "accounts_ever_halted": 6,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.24546242187848397,
+            "median_account_max_dd": -0.1723451546481815,
+            "total_trades": 526,
+            "total_blocked_buy_signals": 1,
+            "state_days": {
+              "NORMAL": 12359,
+              "CAUTION": 5888,
+              "DEFENSIVE": 4699,
+              "HALT": 1054
+            },
+            "recovery_net_days": 994
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": -0.11666737404382899,
+            "cagr_pct": -0.02665705448883715,
+            "max_drawdown_pct": -0.2520304026235386,
+            "sharpe": -0.25457248322347403,
+            "trade_count": 140,
+            "halt_days_pct": 0.59,
+            "locked_at_end": true,
+            "blocked_buy_signals": 3227
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.02937521856198777,
+            "accounts": 20,
+            "accounts_ever_halted": 4,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.21952317624226583,
+            "median_account_max_dd": -0.17173940130558704,
+            "total_trades": 518,
+            "total_blocked_buy_signals": 0,
+            "state_days": {
+              "NORMAL": 13002,
+              "CAUTION": 6765,
+              "DEFENSIVE": 3807,
+              "HALT": 426
+            },
+            "recovery_net_days": 386
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": 1.0645696617899851,
+            "cagr_pct": 0.17103469244856506,
+            "max_drawdown_pct": -0.19252356536962376,
+            "sharpe": 1.1346960113167492,
+            "trade_count": 337,
+            "halt_days_pct": 0.0,
+            "locked_at_end": false,
+            "blocked_buy_signals": 0
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.08398572438473018,
+            "accounts": 20,
+            "accounts_ever_halted": 4,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2165120288076116,
+            "median_account_max_dd": -0.14163146403870286,
+            "total_trades": 510,
+            "total_blocked_buy_signals": 6,
+            "state_days": {
+              "NORMAL": 15584,
+              "CAUTION": 5662,
+              "DEFENSIVE": 1802,
+              "HALT": 952
+            },
+            "recovery_net_days": 912
+          }
+        },
+        {
+          "portfolio": {
+            "total_return_pct": -0.0021275067615004195,
+            "cagr_pct": -0.0004637562551430552,
+            "max_drawdown_pct": -0.2627603822051957,
+            "sharpe": 0.03317728936795263,
+            "trade_count": 80,
+            "halt_days_pct": 0.765,
+            "locked_at_end": true,
+            "blocked_buy_signals": 4066
+          },
+          "isolated": {
+            "aggregate_total_return_pct": 0.056705483155516934,
+            "accounts": 20,
+            "accounts_ever_halted": 3,
+            "accounts_locked_at_end": 0,
+            "worst_account_max_dd": -0.2170521294430052,
+            "median_account_max_dd": -0.15882556561149425,
+            "total_trades": 533,
+            "total_blocked_buy_signals": 0,
+            "state_days": {
+              "NORMAL": 14905,
+              "CAUTION": 4600,
+              "DEFENSIVE": 3698,
+              "HALT": 797
+            },
+            "recovery_net_days": 767
+          }
+        }
+      ]
+    },
     "+ ko\u015fullu a\u011f": {
       "seeds": 8,
       "portfolio": {
