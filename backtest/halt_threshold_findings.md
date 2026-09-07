@@ -1,201 +1,318 @@
-# Drawdown halt: eşik süpürmesi ve histerezis denemesinin sonuçları
+# Drawdown halt: üç turluk ölçüm kaydı
 
-> ## 🔴 KARAR: histerezis reddedildi, mekanizma geri alındı
+> ## 🟡 DURUM: kademeli merdiven öneriliyor, canlı hâlâ sabit %20 mandalda
 >
-> Bu belgedeki ölçümler üzerine **histerezis + kısmi peak reset'i mekanizması
-> geri alındı.** Canlı davranış `origin/main` ile birebir aynı: tek yönlü
-> mandal, sabit `MAX_DRAWDOWN_PCT = 0.20`, halt tetiklendiğinde yeni ALIM
-> durur ve kendiliğinden kalkmaz.
+> Canlı davranış **değişmedi**: `MAX_DRAWDOWN_PCT = 0.20`, tek yönlü mandal,
+> `scripts/run_portfolio.py` durum makinesini çağırmıyor. Kademeli mekanizma
+> yalnızca `policy=` verildiğinde çalışıyor; verilmezse eski kod yolu birebir
+> korunuyor (bu, sentetik veride 1200 günlük equity eğrisinin `origin/main`
+> ile byte-byte aynı çıkmasıyla doğrulandı).
 >
-> Gerekçe (ayrıntısı aşağıda): yeni mekanizmanın getiri/drawdown sonuçları,
-> halt'ı tamamen kapatmakla (%35 eşiği) ayırt edilemiyordu; iki eşikten biri
-> (histerezis bandı) pratikte hiç çalışmıyordu; en kötü hesap drawdown'ı
-> ölçülebilir biçimde kötüleşiyordu. Yani ölçülen tek şey maliyetti, fayda
-> gösterilemedi.
->
-> Kodda kalanlar: bu rapor, `backtest/halt_sweep.py` (eşik süpürme aracı),
-> `manual-halt-sweep.yml` workflow'u, `results/synthetic/` altındaki ham
-> çıktılar ve `engine.risk` içindeki opsiyonel `max_drawdown_pct` parametresi
-> (varsayılanı canlı değer, yalnızca süpürme/test için geçiliyor -- canlı
-> davranışı değiştirmiyor). Sentetik veri üretecindeki determinizm hatası da
-> düzeltilmiş halde kaldı.
->
-> `results/synthetic/halt_sweep_hysteresis*`, `*_reset_marks`, `*_reset_fraction`
-> ve `*_portfolio` dosyaları artık kodda bulunmayan bir mekanizmayı ölçüyor;
-> kayıt olarak duruyorlar. O mekanizmanın kodu git geçmişinde `1fc8e31`
-> commit'inde.
+> Gerçek veri koşusu kademeli merdivenin lehine çıktı, **ama tasarımın dört
+> bileşeninden üçü o koşuda hiç yürümedi.** Ayrıntı: [§5](#5-ne-sınandı-ne-sınanmadı).
+> Canlıya geçiş bu yüzden henüz önerilmiyor; sıradaki adım [§7](#7-sıradaki-adım).
 
-Bu belge iki soruyu sırayla cevaplıyor:
+Bu belge üç turu sırayla kaydediyor:
 
-1. `MAX_DRAWDOWN_PCT` için %20 / %25 / %30 / %35 arasında işe yarar bir orta
-   nokta var mı?
-2. Kilitlenmeyi eşik ayarıyla değil mekanizmayla çözersek ne oluyor?
-
-Kısa cevaplar: **(1) Yok** — eşik ne olursa olsun tek yönlü mandal ya kilitliyor
-ya hiç tetiklenmiyor. **(2) Histerezis + kısmi peak reset'i kilitlenmeyi tamamen
-kaldırıyor (6/20 → 0/20), ama en kötü hesap drawdown'ını -22.8%'den -28.4%'e
-çıkarıyor ve sonuçları halt'ı tamamen kapatmaktan ayırt edilemez hale
-getiriyor.** Bu ikinci bulgu üzerine mekanizma geri alındı (yukarıdaki karar).
+| Tur | Soru | Sonuç |
+|---|---|---|
+| 1 | Eşik ayarı kilitlenmeyi çözer mi? | ❌ Hayır — her eşik ya kilitliyor ya hiç tetiklenmiyor |
+| 2 | Histerezis + kısmi peak reset çözer mi? | ❌ Ölçüldü, reddedildi, geri alındı |
+| 3 | Kademeli kapasite merdiveni çözer mi? | ✅ Sentetikte ve gerçek veride evet — ama eksik sınamayla |
 
 ---
 
 ## ⚠️ Verinin niteliği
 
-Bu ortamda `TWELVEDATA_API_KEY` ve dış ağ erişimi yok, gerçek fiyat verisi
-çekilemiyor. Bütün sayılar `generate_synthetic_data()`'nın deterministik
-rastgele yürüyüşünden geliyor. **Getiri seviyeleri gerçek performans tahmini
-değildir**; okunabilir olan, politikaların *göreli* davranışı (hangisi
-kilitliyor, hangisi hiç tetiklenmiyor, hangisi çırpınıyor).
+Tur 1 ve 2 **yalnızca sentetik** veriyle koşuldu (o oturumlarda API anahtarı
+yoktu). Tur 3 hem sentetik (8 tohum) hem **gerçek Twelve Data** (5 yıl, 20
+sembol) ile koşuldu.
 
-Tek bir çekilişe dayanmasın diye her politika 4–8 farklı tohumda koşuldu;
-tablolarda medyan, parantezde tohumlar arası aralık var.
+Sentetik sayılarda **getiri seviyeleri gerçek performans tahmini değildir**;
+okunabilir olan politikaların *göreli* davranışıdır. Gerçek veri koşusunda ise
+tek bir 5 yıllık pencere var — tohum ortalaması yok, yani "şu oranda koşuda
+şu olur" türü istatistik çıkarılamaz.
 
-> **Ölçüm zemini düzeltmesi:** `generate_synthetic_data()` sembol tohumunu
-> `hash(symbol)` ile üretiyordu. Python'da string hash'i süreç başına
-> rastgelelendiği için "deterministik" olduğu yazan veri süreçler arasında
-> yeniden üretilemiyordu — aynı komut üç kez koşulduğunda AAPL'nin son fiyatı
-> 231.57 / 242.50 / 244.93 çıkıyordu. `crc32`'ye geçildi. Bu belgeden önceki
-> tek-tohumlu eşik tablosu o bozuk üreteçle üretilmişti ve silindi.
+> **Ölçüm zemini düzeltmesi (tur 2'den kalma, hâlâ geçerli):**
+> `generate_synthetic_data()` sembol tohumunu `hash(symbol)` ile üretiyordu.
+> Python'da string hash'i süreç başına rastgelelendiği için "deterministik"
+> yazan veri süreçler arasında yeniden üretilemiyordu. `crc32`'ye geçildi.
 
-Gerçek veriyle aynı süpürme: Actions → **Manual drawdown-halt threshold sweep**
-(workflow'un `main`'de olması gerekir). Ham çıktılar:
-[`results/synthetic/`](results/synthetic/).
+Ham çıktılar: [`results/halt_compare.md`](results/halt_compare.md) (gerçek veri),
+[`results/synthetic/`](results/synthetic/) (sentetik).
 
 ---
 
-## 1) Eşik tek başına: %20 / %25 / %30 / %35
+## 1) Tur 1 — eşik tek başına: %20 / %25 / %30 / %35
 
-4 tohum, izole hesaplar, **mandal modunda** (histerezis kapalı) — yani orijinal
-sorunun sorulduğu haliyle:
+4 tohum, izole hesaplar, mandal modunda:
 
 | Metrik | %20 | %25 | %30 | %35 |
 |---|---|---|---|---|
 | **Sonda kilitli hesap** | **5.5/20** (3–8) | 1 (1–3) | 0 (0–1) | **0** |
-| Halt tetiklenme | 5.5 (3–8) | 1 (1–3) | 0 (0–1) | **0** |
 | Engellenen ALIM sinyali | 388 (266–733) | 45.5 (1–256) | 0 (0–11) | **0** |
 | Halt gün oranı | 6.84% | 0.99% | 0.00% | **0.00%** |
-| Toplam getiri (20 hesap) | 6.12% | 6.47% | 7.15% | 7.21% |
 | En kötü hesap DD | -22.79% | -25.35% | -27.14% | -27.14% |
 
-Okunuşu: **%20 kilitliyor** (20 hesabın 5–8'i pencere sonuna kadar alım
-yapamıyor), **%35 hiç tetiklenmiyor** (dört tohumun hiçbirinde tek bir kez
-bile), **%30 pratikte etkisiz** (medyan sıfır tetiklenme; %35 ile aynı getiri
-ve aynı drawdown). Geriye tek aday olarak **%25** kalıyor: kural hâlâ gerçek
-sinyalleri engelliyor (medyan 45) ama kilitlenme 5.5'ten 1 hesaba düşüyor.
+**%20 kilitliyor, %35 hiç tetiklenmiyor, %30 pratikte etkisiz** (%35 ile aynı
+getiri ve drawdown). %25 kilitlenmeyi 5.5'ten 1 hesaba düşürüyor ama sıfırlamıyor.
 
-Yine de %25 sorunu *çözmüyor*, sadece küçültüyor: dört tohumun hepsinde en az
-bir hesap pencere sonunda kilitli kalıyor. Eşik büyütmek kilitlenmeyi ortadan
-kaldırmıyor, kuralı etkisizleştirene kadar seyrekleştiriyor. Aynı tablo
-histerezisli mekanizmayla koşulduğunda **her eşikte** kilitli hesap sıfıra
-iniyor — asıl fark eşikten değil mekanizmadan geliyor.
-
-> **Önceki rapordan düzeltme:** bozuk üreteçle koşan ilk tabloda "%25'te hiç
-> kilitlenme yok" ve "%30 hiç tetiklenmiyor" yazıyordu. Düzeltilmiş üreteçle
-> %25 dört tohumun hepsinde 1–3 hesabı kilitliyor ve %30 bazı tohumlarda
-> tetikleniyor. Yön aynı kaldı, rakamlar değişti — tek çekilişe güvenmemenin
-> sebebi tam olarak bu.
-
-
-## 2) Mekanizma: mandal vs. histerezis + kısmi reset
-
-8 tohum, izole hesaplar (kilitlenme burada en net görünür, çünkü halt'a giren
-alt hesabı kurtaracak başka mekanizma yok).
-
-| Metrik | H%20 mandal (mevcut) | H%20 → R%5 | H%20 → R%10 | H%20 → R%15 |
-|---|---|---|---|---|
-| **Sonda kilitli hesap** | **6/20** (3–10) | 0 (0–1) | **0** (0–1) | 0.5 (0–1) |
-| Kalıcı durdurulan hesap | 0 | 0 | 0 | 0 |
-| Halt tetiklenme | 6 (3–10) | 6.5 (3–10) | 6.5 (3–10) | 7 (3–10) |
-| Toparlanmayla çıkış | 0 | **0** | **0** | **0** (0–1) |
-| Kısmi reset ile çıkış | 0 | 6 (3–9) | 6 (3–9) | 5 (3–9) |
-| Engellenen ALIM sinyali | 454 (203–1058) | 54 (16–111) | 54 (16–111) | 44 (16–111) |
-| Halt gün oranı | 8.72% | 1.55% | 1.55% | 1.52% |
-| Toplam getiri (20 hesap) | 4.42% | 4.83% | 4.83% | 4.78% |
-| Ortalama maks. DD | -16.50% | -17.33% | -17.33% | -17.38% |
-| **En kötü hesap DD** | **-22.79%** | -28.37% | **-28.37%** | -28.37% |
-
-### Bulgu A: kilitlenme çözüldü
-
-Mandal 20 hesabın 6'sını (en kötü tohumda 10'unu) pencere sonuna kadar kilitli
-bırakıyor. Histerezisli mekanizmada bu 0'a iniyor ve kalıcı durdurma sekiz
-tohumun hiçbirinde tetiklenmiyor. Halt'ın engellediği ALIM sinyali 454'ten
-54'e düşüyor: kural hâlâ fren yapıyor, ama artık frene basılı kalmıyor.
-
-### Bulgu B: onaylanan iki eşikten biri fiilen çalışmıyor
-
-**Toparlanmayla çıkış 8 tohum × 20 hesapta toplam BİR kez oldu** (o da yalnızca
-R=%15'te). Bütün diğer çıkışlar kısmi reset'ten geldi. Nedeni ölçüldü: halt'a
-giren hesap kısa sürede nakde dönüyor (halt günlerinin %85–94'ünde equity
-kelimesi kelimesine sabit, pencere sonunda açık pozisyon sıfır). Nakitteki bir
-hesabın equity'si donduğu için "drawdown %10'a gerilesin" koşulu yapısal olarak
-ulaşılamaz.
-
-Pratik sonucu: **R=%5, %10 ve %15 birbirinden ayırt edilemiyor.** Kilidi açan
-şey histerezis değil, kısmi peak reset'i; "iki eşik arasındaki fark ne olmalı"
-sorusunun bu veride ölçülebilir bir cevabı yok. Bu bulgu, mekanizmanın geri
-alınma gerekçelerinden biri: onaylanan tasarımın yarısı ölçülebilir biçimde
-hiç çalışmıyordu.
-
-### Bulgu C: asıl belirleyici parametre reset bekleme süresi
-
-| Metrik | 20 gün | 40 gün | 60 gün (varsayılan) |
-|---|---|---|---|
-| Sonda kilitli hesap | 0 | 0 | 0 |
-| Engellenen ALIM sinyali | 1 (0–5) | 12 (8–24) | 22 (16–50) |
-| Halt gün oranı | 0.42% | 0.83% | 1.25% |
-| Toplam getiri | 6.24% | 5.90% | 6.00% |
-
-Üçü de kilidi açıyor; fark halt'ın ne kadar fren yaptığında. 20 gün kuralı
-neredeyse dişsiz bırakıyor (medyan 1 engellenen sinyal). **60 gün** en fazla
-korumayı veren ve hâlâ kilitlemeyen değer.
-
-### Bulgu D: drawdown artışı ayarla giderilemiyor
-
-Kilidin açılması bedava değil: bot yeniden pozisyon aldığı için en kötü hesabın
-drawdown'ı -22.79%'dan -28.37%'ye çıkıyor (ortalama -16.50% → -17.33%). Bunu
-`reset_fraction`'la (reset'te peak'in equity'ye ne kadar çekildiği) telafi
-etmeyi denedim — olmuyor:
-
-| Metrik | 0.25 | 0.5 (varsayılan) | 0.75 |
-|---|---|---|---|
-| Sonda kilitli hesap | 0 (0–1) | 0 (0–1) | **1** (0–3) |
-| Kalıcı durdurulan hesap | 0 | 0 | 0.5 (0–1) |
-| En kötü hesap DD | -26.80% | -26.80% | **-27.58%** |
-| Halt tetiklenme | 5.5 | 5.5 | 8 |
-
-Peak'i daha az çekmek (0.75) korumayı artırmıyor; hem kilitlenmeyi geri
-getiriyor hem de en kötü drawdown'ı kötüleştiriyor, çünkü hesap daha sık halt'a
-girip çıkıyor. 0.25 ile 0.5 bu pencerede birebir aynı. **0.5 kalıyor.**
-
-Dürüst okuma: mandalın "daha iyi drawdown"ı bir koruma değil, ölü hesabın
-kaybedememesinin yan etkisi. Kilitlenmeyi istemiyorsak bu farkı kabul ediyoruz.
+Sonuç: eşik büyütmek kilitlenmeyi ortadan kaldırmıyor, kuralı etkisizleştirene
+kadar seyrekleştiriyor. **Sorun eşikte değil, mekanizmada.**
 
 ---
 
-## Kabul kriterleri: ne tuttu, ne tutmadı
+## 2) Tur 2 — histerezis + kısmi peak reset (REDDEDİLDİ)
+
+8 tohum, izole hesaplar:
+
+| Metrik | %20 mandal | H%20 → R%5 | H%20 → R%10 | H%20 → R%15 |
+|---|---|---|---|---|
+| **Sonda kilitli hesap** | **6/20** (3–10) | 0 (0–1) | **0** (0–1) | 0.5 (0–1) |
+| Toparlanmayla çıkış | 0 | **0** | **0** | **0** (0–1) |
+| Kısmi reset ile çıkış | 0 | 6 (3–9) | 6 (3–9) | 5 (3–9) |
+| Engellenen ALIM sinyali | 454 (203–1058) | 54 (16–111) | 54 (16–111) | 44 (16–111) |
+| **En kötü hesap DD** | **-22.79%** | -28.37% | **-28.37%** | -28.37% |
+
+**Neden reddedildi:** (a) getiri/drawdown sonuçları halt'ı tamamen kapatmakla
+ayırt edilemiyordu; (b) onaylanan iki eşikten biri fiilen hiç çalışmadı —
+toparlanmayla çıkış 8 tohum × 20 hesapta **toplam bir kez** oldu; (c) en kötü
+hesap drawdown'ı -22.8%'den -28.4%'e çıktı. Ölçülen tek şey maliyetti.
+
+**(b)'nin sebebi tur 3'ün de temel dayanağı:** halt'a giren hesap kısa sürede
+nakde dönüyor (halt günlerinin %85–94'ünde equity kelimesi kelimesine sabit).
+Nakitteki bir hesabın equity'si donduğu için "drawdown geri gerilesin" koşulu
+**yapısal olarak ulaşılamaz**. Histerezis tek başına ölü hesabı diriltemez.
+
+Mekanizmanın kodu `432f577` commit'inde eklendi, `6254c93`'te geri alındı.
+(Bu belgenin önceki sürümü kodun yerini `1fc8e31` diye veriyordu; o commit
+eşik tablosunun yeniden koşulması, mekanizmanın eklendiği commit değil.)
+`results/synthetic/halt_sweep_hysteresis*`, `*_reset_marks`, `*_reset_fraction`
+dosyaları artık kodda olmayan bir mekanizmayı ölçüyor; kayıt olarak duruyorlar.
+
+---
+
+## 3) Tur 3 — kademeli kapasite merdiveni
+
+Tasarım (`engine/halt.py`), dört bileşen:
+
+| Durum | Drawdown | Pozisyon kapasitesi |
+|---|---|---|
+| NORMAL | 0–10% | %100 |
+| CAUTION | 10–15% | %75 |
+| DEFENSIVE | 15–20% | %50 |
+| HALT | 20%+ | %0, 14 gün sonra %25 (güvenlik ağı) |
+
+Artı: her kademede histerezis (girişte %20, çıkışta %15 gibi) ve %30/%25
+mutlak taban.
+
+Tur 2'den farkı: **kademeli kapasite hesabı tam nakde hiç düşürmüyor**, yani
+equity hareket etmeye devam ediyor ve drawdown gerçekten toparlanabiliyor.
+Histerezisin tek başına çözemediği şey buydu.
+
+### 3a) Sentetik ablasyon, 8 tohum
+
+Hangi bileşenin neyi yaptığını ayrıştırmak için yedi kol:
+
+| Kol | Kilitli /20 | Portföy kilitli | Portföy getiri | Sharpe | En derin DD | En kötü hesap DD |
+|---|---|---|---|---|---|---|
+| legacy %20 | 6.0 | 6/8 | 20.84% | 0.16 | **-25.72%** | -22.34% |
+| **kademeli v1** | **0.0** | **0/8** | **21.67%** | **0.28** | -34.84% | -23.21% |
+| v1 + taban %30 | **0.0** | 2/8 | 19.68% | 0.19 | -32.21% | -23.21% |
+| v1 + taban %25 | 0.1 | 5/8 | 13.23% | 0.08 | -27.55% | -23.14% |
+| + koşullu ağ | 3.8 | 5/8 | 14.95% | 0.12 | **-24.16%** | **-21.50%** |
+| + koşullu ağ + taban %30 | 3.8 | 5/8 | 14.95% | 0.12 | -24.16% | -21.50% |
+| + koşullu ağ + taban %25 | 3.8 | 5/8 | 14.95% | 0.12 | -24.16% | -21.50% |
+
+### Bulgu A: kilitlenme çözüldü, ama kuyruk açıldı
+
+v1 kilitlenmeyi 8 tohumun **hepsinde** sıfırladı (6.0 → 0.0 hesap, 6/8 → 0/8
+portföy koşusu) ve hem getiriyi hem Sharpe'ı iyileştirdi. Bedeli: iki tohumda
+portföy drawdown'ı **-34.8%** ve **-34.6%**'ya çıktı (legacy'de -21.7% / -23.4%).
+Kalan altı tohumda fark küçüktü (ortalama -1.24 puan). Yani kalın kuyruk:
+çoğu zaman nötr, bazen çok kötü.
+
+### Bulgu B: taban kuyruğu daraltıyor ama kapatmıyor — yapısal sebeple
+
+| En derin portföy DD | legacy | v1 | v1+%30 | v1+%25 |
+|---|---|---|---|---|
+| 8 tohum | -25.72% | -34.84% | -32.21% | -27.55% |
+
+Hiçbir taban legacy seviyesine inemiyor. **Sebebi parametre değil:** taban
+yalnızca *yeni alımı* durduruyor. Hesap eşiği geçtiğinde zaten yüklü ve mevcut
+pozisyonlar kaybetmeye devam ediyor. Alım tarafındaki bir taban drawdown'ı
+tanım gereği sınırlayamaz — bunun için zorunlu likidasyon gerekir, ki bu
+tasarımda hiç konuşulmadı.
+
+### Bulgu C: taban kilitlenmeyi geri getiriyor
+
+İzole hesaplarda taban zararsız görünüyor (kilitli 0.0 / 0.1), ama **portföy
+seviyesinde kilitlenme geri geliyor**: 0/8 → 2/8 (taban %30), 0/8 → **5/8**
+(taban %25). Sebebi tabanın kendi histerezisi: %30'da bağlayan taban ancak DD
+%25'e gerileyince bırakıyor, sürekli düşen bir piyasada portföy o bandın
+altında uzun süre kalıyor.
+
+Bedeli getiride de görünüyor: taban %30 → 21.67%'den 19.68%'e; taban %25 →
+**13.23%**, yani v1'in kazancının tamamından fazlası.
+
+**Taban %25 elendi:** her eksende kötü — getiriyi 8.4 puan yakıyor,
+kilitlenmenin çoğunu geri getiriyor, ve kuyruğu yine legacy seviyesine
+indiremiyor.
+
+### Bulgu D: koşullu ağ elendi (kendi önerim, veri desteklemedi)
+
+"Ağ yalnızca drawdown derinleşmiyorsa açılsın" varyantı en iyi kuyruğu verdi
+(-24.16%, legacy'den bile iyi) — **ama bunu hesapları yeniden kilitleyerek
+başardı.** Sonda bloke kalan hesapların bloke serileri ölçüldü:
+
+| Hesap (tohum 2) | legacy | koşullu ağ |
+|---|---|---|
+| AAPL | son 583 gün | son **519 gün** |
+| NVDA | son 829 gün | son **617 gün** |
+| AMZN (tohum 4) | son 649 gün | son **641 gün** |
+
+1200 günlük pencerede yarısı boyunca alım yok. Ayrıca portföy getirisini
+21.67%'den 14.95%'e düşürüyor. Legacy'ye kıyasla bile getiri 5.9 puan aşağıda.
+
+**Varsayılan olarak kapatıldı**
+(`ALSATBOTU_HALT_RECOVERY_REQUIRES_STABLE_DD=0`), kodu ve testleri duruyor.
+
+### Bulgu E: 14 günlük ağ, "nadir kaçış kapısı" değil
+
+v1'de 1406 HALT gününün **1357'si** (%96.5) ağın açık olduğu günler. HALT
+pratikte "14 gün %0, sonra süresiz %25" anlamına geliyor. Tasarım kararı yanlış
+değil ama **"güvenlik ağı" adı olan biteni yanlış anlatıyor**; v1'in kuyruğunun
+mekanizması da tam bu — HALT'a giren hesap 14 gün sonra düşüşe %25 ile geri
+biniyor.
+
+---
+
+## 4) Tur 3 — gerçek veri koşusu (7 Eylül 2026)
+
+Twelve Data, 5 yıl, 20 sembol, tek pencere.
+Ham çıktı: [`results/halt_compare.md`](results/halt_compare.md).
+Koşu: `manual-halt-sweep.yml`, `--mode compare`.
+
+### İzole hesaplar (20 tek-sembol hesabı)
+
+| Metrik | legacy %20 | kademeli v1 | v1+taban%30 |
+|---|---|---|---|
+| **Sonda kilitli hesap** | 4/20 | **0/20** | **0/20** |
+| Halt'a hiç girmiş hesap | 6/20 | **0/20** | **0/20** |
+| **En kötü hesap maks. DD** | -23.64% | **-19.72%** | **-19.72%** |
+| Medyan hesap maks. DD | -16.58% | -15.65% | -15.65% |
+| Toplam getiri (20 hesap) | 20.74% | 20.53% | 20.53% |
+| Toplam işlem | 671 | 701 | 701 |
+| Engellenen ALIM sinyali | 262 | **0** | **0** |
+
+### Portföy geneli
+
+| Metrik | legacy %20 | kademeli v1 | v1+taban%30 |
+|---|---|---|---|
+| **Toplam getiri** | **-9.43%** | **+9.10%** | **+9.10%** |
+| CAGR | -1.39% | +1.24% | +1.24% |
+| Maks. DD | -26.53% | -27.84% | -27.84% |
+| Sharpe | -0.19 | **+0.16** | **+0.16** |
+| İşlem sayısı | **38** | 422 | 422 |
+| Halt aktif gün oranı | **92.0%** | 2.3% | 2.3% |
+| Engellenen ALIM | **6358** | 9 | 9 |
+| Sonda kilitli | **EVET** | hayır | hayır |
+
+### Bulgu F: kilitlenme gerçek veride sentetikten çok daha ağır
+
+Legacy portföy kolu 5 yılın **%92'sinde** halt'ta, 6358 ALIM sinyalini
+engelliyor, toplam **38 işlem** yapıyor ve **-9.43%** ile bitiriyor. Bu "ara
+sıra tetikleniyor" değil, sistemin fiilen donması. Kademeli merdiven aynı
+veride 422 işlem yapıyor ve **+9.10%** getiriyor.
+
+### Bulgu G: sentetik kuyruk gerçek veride görünmedi
+
+Portföy maks. DD farkı yalnızca 1.31 puan (-26.53% → -27.84%). Sentetikteki
+-34.8% kuyruğu bu pencerede yok. Dahası, tur 2'yi eleyen metrik olan **en kötü
+hesap DD'si kötüleşmedi, iyileşti**: -23.64% → -19.72%.
+
+Bu, kuyruğun yok olduğu anlamına gelmez — bu pencerede denk gelmediği anlamına
+gelir.
+
+### Bulgu H: HALT'a hiç girilmedi
+
+İzole hesapların durum dağılımı (hesap-günü):
+
+| Durum | Kapasite | gün |
+|---|---|---|
+| NORMAL | %100 | 22.838 |
+| CAUTION | %75 | 6.436 |
+| DEFENSIVE | %50 | 6.226 |
+| **HALT** | %0 → %25 | **0** |
+| Güvenlik ağı açık | — | **0** |
+
+Sebebi aslında iyi haber: CAUTION/DEFENSIVE kademelerinde pozisyonu küçültmek,
+drawdown'ın %20'ye ulaşmasını **en baştan engelledi** — en kötü hesap %19.72'de
+kaldı. Merdiven işini o kadar iyi yaptı ki HALT'a sıra gelmedi.
+
+Ama sonucu şu: `v1` ile `v1+taban%30` kolları gerçek veride **byte-byte aynı
+sonuç** verdi. Taban hiç bağlamadı.
+
+Portföy kolunda halt %2.3 gün aktif (~29 gün), yani orada HALT'a girildi. Ağın
+o episodlarda açılıp açılmadığı **ölçülmedi** — `recovery_net_days` metriği
+yalnızca izole hesaplar üzerinden toplanıyor.
+
+---
+
+## 5) Ne sınandı, ne sınanmadı
+
+Tasarımın dört bileşeninden gerçek veride yalnızca biri yürüdü:
+
+| Bileşen | Sentetik | Gerçek veri |
+|---|---|---|
+| Kademeli merdiven (%100/75/50) | ✅ | ✅ 12.662 hesap-günü CAUTION+DEFENSIVE |
+| HALT (%0 kapasite) | ✅ 1406 hesap-günü | ❌ izole hesaplarda 0 gün |
+| 14 günlük güvenlik ağı | ✅ 1357 gün açık | ❌ 0 gün |
+| Mutlak taban %30 | ✅ (yalnızca v1 kolunda) | ❌ hiç bağlamadı |
+
+**Canlıya alınırsa, risk motoruna gerçek veride hiç yürütülmemiş üç kod yolu
+gönderilmiş olur.** Birim testleri var (59 test: durum geçişleri, her kademede
+histerezis boşluğu, eşik etrafında zikzak yapmama ve düz eşiğin aynı seride
+zikzak yaptığının karşı-kanıtı, çok kademe atlama, donmuş nakit hesabın 14.
+günde açılması, saatin HALT'tan çıkışta sıfırlanması, tabanın saatten bağımsız
+sıfırlaması ve kendi histerezisi) — ama birim testi gerçek veri değildir.
+
+---
+
+## 6) Kabul kriterleri
 
 | Kriter | Sonuç |
 |---|---|
-| Kalıcı kilitli hesap: 0 | ✅ 8 tohumda medyan 0 (bir tohumda 1 hesap, pencere sonuna yakın halt'a girdiği için henüz reset süresini doldurmamıştı — kalıcı kilit değil) |
-| Çırpınma yok (döngü ≤ ~1/yıl) | ✅ 5 yılda hesap başına ~0.06 tetiklenme |
-| Halt hâlâ ALIM engelliyor | ✅ medyan 54 sinyal (mandal: 454) |
-| Maks. DD bugünkünden kötü değil | ❌ **düştü** — en kötü hesap -22.8% → -28.4%, ortalama -16.5% → -17.3% |
-| ≥20 tohumda tutarlı | ⚠️ 8 tohumda koşuldu (her tohum ~13 dk); yön bütün tohumlarda aynı |
-| Gerçek veriyle doğrulanmış | ❌ **yapılmadı** — bu ortamda API anahtarı/ağ yok |
+| Kalıcı kilitli hesap: 0 | ✅ Sentetik 8/8 tohumda 0.0; gerçek veride 0/20 |
+| Çırpınma yok | ✅ Histerezis testi: %20 etrafında salınan 30 marklık seride 1 geçiş (düz eşik aynı seride 29 kez açılıp kapanıyor) |
+| Halt hâlâ ALIM engelliyor | ⚠️ Gerçek veride izole hesaplarda **0** sinyal engellendi — merdiven yeterli oldu, ama HALT'ın frenleme gücü ölçülmedi |
+| Maks. DD bugünkünden kötü değil | ⚠️ Karışık: gerçek veride en kötü **hesap** DD'si iyileşti (-23.6% → -19.7%), **portföy** DD'si 1.31 puan kötüleşti |
+| Legacy yolu bozulmadı | ✅ Sentetik veride 1200 günlük equity eğrisi `origin/main` ile birebir aynı (122 işlem, 4657 red, 761 halt günü) |
+| Gerçek veriyle doğrulanmış | ⚠️ Merdiven evet; HALT / ağ / taban **hayır** |
 
-## Öneri
+---
 
-1. Mekanizma canlıya alınmadan önce **gerçek Twelve Data ile** bir kez koşulmalı
-   (`manual-halt-sweep.yml`, workflow main'e girdikten sonra). Sentetik veri
-   yalnızca göreli davranışı gösteriyor.
-2. Parametreler bu ölçümlere göre: **H %20** (değişmedi), **R %10**,
-   **reset 60 gün × 0.5**, **max 2 reset**, **sert taban %50**. R'nin değeri bu
-   veride belirleyici olmadığı için ortadaki değer seçildi.
-3. Kabul edilmesi gereken takas: en kötü senaryoda drawdown ~5.6 puan artıyor.
-   Bu kabul edilemezse alternatif, kilidi açarken pozisyon boyutunu da kısmak
-   olur (halt sonrası ilk N işlemde %50 boyut gibi) — ölçülmedi, önerilmedi.
+## 7) Sıradaki adım
 
-**Bu öneri uygulanmadı.** Yukarıdaki karar kutusuna bakın: mekanizma geri
-alındı, `MAX_DRAWDOWN_PCT = 0.20` sabit haliyle korundu. Gerçek veriyle
-doğrulama yapılmak istenirse `manual-halt-sweep.yml` hâlâ kullanılabilir --
-ama artık yalnızca eşik süpürmesi yapar, histerezis varyantı kodda yok.
+**Kriz dönemi koşusu (planlandı, henüz yapılmadı).** Bugünkü pencere HALT'ı
+hiç tetiklemedi, yani mekanizmanın asıl koruma katmanı gerçek veride
+sınanmadan duruyor. Yapılacak: 2020 çöküşünü içeren daha uzun bir pencere
+(8–10 yıl) ya da daha oynak bir sembol evreniyle bir koşu daha — HALT, 14
+günlük ağ ve taban gerçekten yürüsün.
+
+Ondan sonra canlıya geçiş ayrıca değerlendirilecek. Geçiş yapılırsa gereken
+diff küçük: `scripts/run_portfolio.py`'a `policy=DEFAULT_HALT_POLICY` ve günlük
+mark'ta `update_halt_state()`, `scripts/daily_report.py`'a durum raporlaması.
+
+### Öneri (kriz koşusundan sonra yeniden değerlendirilmek üzere)
+
+1. **Kademeli merdiven alınmalı.** Gerçek veride neredeyse her eksende
+   legacy'yi yeniyor; tek kötüleşen metrik 1.31 puan portföy DD'si, buna
+   karşılık 18.5 puan getiri ve tamamen çözülmüş kilitlenme.
+2. **Taban %30 kalsın.** Bağlamadığında maliyeti tam olarak sıfır — kanıtı
+   elimizde: gerçek veride iki kol byte-byte aynı sonuç verdi. Yalnızca
+   felaket senaryosunda devreye giren sigorta. Ama sentetikte portföy
+   kilitlenmesini 0/8'den 2/8'e çıkardığı unutulmamalı (bulgu C).
+3. **Koşullu ağ kapalı kalsın** (bulgu D).
+4. **"Güvenlik ağı" adı gözden geçirilmeli** (bulgu E) — mekanizma "14 gün
+   sonra kalıcı %25 kapasite", nadir bir kaçış kapısı değil.
