@@ -26,6 +26,7 @@ from alsatbotu.config import (
     CATEGORY_EXPOSURE_LIMIT_PCT,
     MAX_DRAWDOWN_PCT,
     MAX_OPEN_POSITIONS,
+    source_for,
 )
 from alsatbotu.data import get_price_history
 from engine.risk import is_drawdown_halted
@@ -46,7 +47,7 @@ def fetch_current_prices(state: PortfolioState, days: int = 7) -> dict[str, floa
     prices: dict[str, float] = {}
     for symbol in state.open_positions:
         try:
-            rows = get_price_history(symbol, source="coingecko", days=days)
+            rows = get_price_history(symbol, source=source_for(symbol), days=days)
         except Exception as exc:  # noqa: BLE001 - report must survive a bad symbol
             print(f"{symbol}: failed to fetch current price ({exc})")
             continue
