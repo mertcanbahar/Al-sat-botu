@@ -182,7 +182,10 @@ def run_policy(
 def policy_label(policy: HaltPolicy) -> str:
     if policy.latching:
         return f"H%{policy.halt_pct * 100:.0f} / mandal"
-    return f"H%{policy.halt_pct * 100:.0f} → R%{policy.release_pct * 100:.0f}"
+    return (
+        f"H%{policy.halt_pct * 100:.0f} → R%{policy.release_pct * 100:.0f} "
+        f"/ reset {policy.reset_after_marks}g"
+    )
 
 
 def _median(values: list) -> Optional[float]:
@@ -337,6 +340,16 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         default=["none", "0.05", "0.10", "0.15"],
         help="Serbest bırakma eşikleri; 'none' = histerezis yok (eski mandal davranışı)",
     )
+    parser.add_argument(
+        "--reset-after-marks",
+        type=int,
+        nargs="+",
+        default=[HaltPolicy().reset_after_marks],
+        help=(
+            "Nakitte kilitli bir hesabın kısmi reset'ten önce kaç işaretleme "
+            "beklediği. Pratikte halt'ı asıl bırakan mekanizma budur."
+        ),
+    )
     parser.add_argument("--seeds", type=int, default=1, help="Kaç farklı sentetik veri kümesi")
     parser.add_argument("--no-portfolio", action="store_true", help="Sadece izole hesaplar (hızlı)")
     parser.add_argument("--synthetic", action="store_true")
@@ -351,9 +364,14 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         parser.error("--seeds yalnızca sentetik veriyle anlamlı (gerçek veri tek bir tarihtir).")
 
     policies = [
-        HaltPolicy(halt_pct=h, release_pct=None if r == "none" else float(r))
+        HaltPolicy(
+            halt_pct=h,
+            release_pct=None if r == "none" else float(r),
+            reset_after_marks=n,
+        )
         for h in args.thresholds
         for r in args.release_pcts
+        for n in args.reset_after_marks
     ]
 
     seeds = list(range(42, 42 + args.seeds)) if args.synthetic else [None]
