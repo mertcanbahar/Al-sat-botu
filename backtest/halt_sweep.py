@@ -62,6 +62,14 @@ from backtest.portfolio_backtest import (  # noqa: E402
 DEFAULT_THRESHOLDS = [0.20, 0.25, 0.30, 0.35]
 HALT_REASON_PREFIX = "Drawdown halt"
 
+# Durum -> kapasite etiketi, rapor tablosu için.
+_STATES = {
+    "NORMAL": "100%",
+    "CAUTION": "75%",
+    "DEFENSIVE": "50%",
+    "HALT": "0% → ağ açılırsa 25%",
+}
+
 # The two mechanisms compared in --mode compare. "legacy" is exactly what
 # runs live today; "staged" is the graduated state machine. Nothing else
 # differs between the arms -- same signals, same sizing, same costs, same
@@ -91,6 +99,19 @@ ARMS: dict[str, dict] = {
     "+ taban %25": {
         "halt_policy": HaltPolicy(
             recovery_requires_stable_drawdown=True, floor_pct=0.25, floor_exit_pct=0.20
+        )
+    },
+    # Koşulsuz ağ + taban: tabanı tek başına ölçen kollar. Koşullu ağ
+    # drawdown'ı zaten %24'ün altında tuttuğu için tabanı hiç tetiklemiyor;
+    # tabanın kuyruğu kesip kesmediği ancak burada görünür.
+    "v1 + taban %30": {
+        "halt_policy": HaltPolicy(
+            recovery_requires_stable_drawdown=False, floor_pct=0.30, floor_exit_pct=0.25
+        )
+    },
+    "v1 + taban %25": {
+        "halt_policy": HaltPolicy(
+            recovery_requires_stable_drawdown=False, floor_pct=0.25, floor_exit_pct=0.20
         )
     },
 }
@@ -294,9 +315,15 @@ def _mean(values: Sequence[Optional[float]]) -> Optional[float]:
     return statistics.fmean(present) if present else None
 
 
-def run_comparison(seeds: Sequence[int], years: int, price_data: Optional[dict] = None) -> dict:
+def run_comparison(
+    seeds: Sequence[int],
+    years: int,
+    price_data: Optional[dict] = None,
+    arms: Optional[dict] = None,
+) -> dict:
     """Every arm over every seed. Real data means a single fixed dataset."""
-    per_arm: dict[str, list[dict]] = {name: [] for name in ARMS}
+    arms = arms if arms is not None else ARMS
+    per_arm: dict[str, list[dict]] = {name: [] for name in arms}
 
     for seed in seeds:
         if price_data is None:
@@ -305,7 +332,7 @@ def run_comparison(seeds: Sequence[int], years: int, price_data: Optional[dict] 
             data = price_data
         universe = [e for e in BACKTEST_SYMBOLS if e["symbol"] in data]
 
-        for name, kwargs in ARMS.items():
+        for name, kwargs in arms.items():
             print(f"  tohum {seed} / {name} ...", flush=True)
             per_arm[name].append(run_arm_once(kwargs, data, universe))
 
@@ -421,21 +448,31 @@ def write_comparison_markdown(
     row("**Sonda kilitli koşu sayısı**", lambda s: f"{s['portfolio_locked_runs']}/{s['seeds']}")
     lines.append("")
 
-    lines.append("## 3) Kademeli kolun durum dağılımı (izole hesap-günü)")
+    lines.append("## 3) Kademeli kolların durum dağılımı (izole hesap-günü)")
     lines.append("")
-    staged = summary.get("kademeli")
-    if staged:
-        lines.append("| Durum | Ortalama gün | Kapasite |")
-        lines.append("|---|---|---|")
-        for state, capacity in (
-            ("NORMAL", "100%"),
-            ("CAUTION", "75%"),
-            ("DEFENSIVE", "50%"),
-            ("HALT", "0% → 14 gün sonra 25%"),
-        ):
-            lines.append(
-                f"| {state} | {_num(staged['isolated']['state_days'][state], 1)} | {capacity} |"
+    # Legacy kolun state_days'i boştur (o modda durum makinesi çalışmaz), o
+    # yüzden kol adına göre değil, veri olup olmadığına göre seçiliyor --
+    # kolları yeniden adlandırmak tabloyu sessizce boşaltmasın.
+    staged_names = [
+        n for n in names if any(summary[n]["isolated"]["state_days"].get(s) for s in _STATES)
+    ]
+    if staged_names:
+        lines.append("| Durum | Kapasite | " + " | ".join(staged_names) + " |")
+        lines.append("|---|---|" + "---|" * len(staged_names))
+        for state, capacity in _STATES.items():
+            cells = " | ".join(
+                _num(summary[n]["isolated"]["state_days"][state], 1) for n in staged_names
             )
+            lines.append(f"| {state} | {capacity} | {cells} |")
+        lines.append("")
+        lines.append(
+            "| Güvenlik ağının açık olduğu gün | — | "
+            + " | ".join(_num(summary[n]["isolated"]["recovery_net_days"], 1) for n in staged_names)
+            + " |"
+        )
+        lines.append("")
+    else:
+        lines.append("_Kademeli kol koşulmadı._")
         lines.append("")
 
     lines.append("## Nasıl okunmalı")
@@ -601,6 +638,12 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         help="compare modunda kullanılacak sentetik tohumlar (gerçek veride yok sayılır)",
     )
     parser.add_argument(
+        "--arms",
+        nargs="+",
+        default=None,
+        help="Yalnızca bu kolları koş (varsayılan: hepsi). Bkz. ARMS anahtarları.",
+    )
+    parser.add_argument(
         "--synthetic",
         action="store_true",
         help="Sentetik veri kullan (ağ yok, gerçek sonuç değil)",
@@ -623,7 +666,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             if not real_data:
                 raise SystemExit("Hiçbir sembol için kullanılabilir veri yok.")
         print(f"Karşılaştırma: {' vs '.join(ARMS)} — {len(seeds)} koşu")
-        summary = run_comparison(seeds, args.years, price_data=real_data)
+        arms = ARMS if args.arms is None else {k: ARMS[k] for k in args.arms}
+        summary = run_comparison(seeds, args.years, price_data=real_data, arms=arms)
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "halt_compare.json").write_text(
