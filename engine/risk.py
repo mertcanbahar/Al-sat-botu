@@ -39,11 +39,19 @@ def compute_position_size(equity: float, entry_price: float, stop_price: float) 
     return risk_budget / risk_per_unit
 
 
-def is_drawdown_halted(current_equity: float, peak_equity: float) -> bool:
+def is_drawdown_halted(
+    current_equity: float, peak_equity: float, max_drawdown_pct: float | None = None
+) -> bool:
+    """True when equity is `max_drawdown_pct` or more below its peak.
+
+    `max_drawdown_pct` defaults to the live `MAX_DRAWDOWN_PCT`; callers pass
+    it explicitly only to test alternative thresholds (backtest/halt_sweep.py).
+    """
     if peak_equity <= 0:
         return False
+    threshold = MAX_DRAWDOWN_PCT if max_drawdown_pct is None else max_drawdown_pct
     drawdown = (peak_equity - current_equity) / peak_equity
-    return drawdown >= MAX_DRAWDOWN_PCT
+    return drawdown >= threshold
 
 
 @dataclass
@@ -62,6 +70,7 @@ def evaluate_buy(
     entry_price: float,
     atr: float,
     current_prices: dict[str, float],
+    max_drawdown_pct: float | None = None,
 ) -> RiskDecision:
     """Decide whether to open a new position and, if so, at what size.
 
@@ -76,10 +85,11 @@ def evaluate_buy(
     if symbol in state.open_positions:
         reasons.append(f"Position already open for {symbol}")
 
-    if is_drawdown_halted(equity, state.peak_equity):
+    halt_threshold = MAX_DRAWDOWN_PCT if max_drawdown_pct is None else max_drawdown_pct
+    if is_drawdown_halted(equity, state.peak_equity, halt_threshold):
         reasons.append(
             f"Drawdown halt: equity {equity:.2f} is more than "
-            f"{MAX_DRAWDOWN_PCT * 100:.0f}% below peak {state.peak_equity:.2f}"
+            f"{halt_threshold * 100:.0f}% below peak {state.peak_equity:.2f}"
         )
 
     if len(state.open_positions) >= MAX_OPEN_POSITIONS:

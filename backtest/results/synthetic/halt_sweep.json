@@ -1,0 +1,1305 @@
+{
+  "generated_at": "2026-09-07T08:59:16.480834Z",
+  "synthetic": true,
+  "years": 5,
+  "symbols": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "META",
+    "JPM",
+    "XOM",
+    "WMT",
+    "KO",
+    "JNJ",
+    "UNH",
+    "CAT",
+    "HON",
+    "NEE",
+    "APD",
+    "DIS",
+    "PLD",
+    "BAC",
+    "PG"
+  ],
+  "excluded_symbols": [],
+  "runs": [
+    {
+      "threshold": 0.2,
+      "portfolio": {
+        "window": {
+          "start": "2021-03-29",
+          "end": "2025-10-31"
+        },
+        "total_return_pct": -0.14232346136186969,
+        "cagr_pct": -0.03288551332239642,
+        "max_drawdown_pct": -0.2419217529359314,
+        "sharpe": -0.25906494626532356,
+        "trade_count": 142,
+        "hit_rate_pct": 0.4154929577464789,
+        "rejected_signals": 4466,
+        "halt": {
+          "days": 1200,
+          "halt_days": 694,
+          "halt_days_pct": 0.5783333333333334,
+          "longest_halt_streak": 694,
+          "halted_at_end": true,
+          "blocked_buy_signals": 3395,
+          "first_halt_date": "2023-03-07"
+        }
+      },
+      "isolated": {
+        "aggregate_total_return_pct": 0.038929561828411785,
+        "accounts": 20,
+        "accounts_ever_halted": 6,
+        "accounts_locked_at_end": 6,
+        "locked_symbols": [
+          "AAPL",
+          "AMZN",
+          "BAC",
+          "DIS",
+          "PLD",
+          "WMT"
+        ],
+        "mean_halt_days_pct": 0.07254166666666666,
+        "total_blocked_buy_signals": 471,
+        "total_trades": 509,
+        "per_symbol": {
+          "AAPL": {
+            "total_return_pct": 0.04967725058319261,
+            "max_drawdown_pct": -0.20808416262721355,
+            "trade_count": 21,
+            "halt": {
+              "days": 1200,
+              "halt_days": 458,
+              "halt_days_pct": 0.38166666666666665,
+              "longest_halt_streak": 458,
+              "halted_at_end": true,
+              "blocked_buy_signals": 116,
+              "first_halt_date": "2024-01-31"
+            }
+          },
+          "MSFT": {
+            "total_return_pct": 0.13272671996627583,
+            "max_drawdown_pct": -0.13880216171288134,
+            "trade_count": 20,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "GOOGL": {
+            "total_return_pct": 0.06616352187889851,
+            "max_drawdown_pct": -0.1409647683082679,
+            "trade_count": 34,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "AMZN": {
+            "total_return_pct": 0.032441143268049366,
+            "max_drawdown_pct": -0.2193918466670004,
+            "trade_count": 20,
+            "halt": {
+              "days": 1200,
+              "halt_days": 522,
+              "halt_days_pct": 0.435,
+              "longest_halt_streak": 520,
+              "halted_at_end": true,
+              "blocked_buy_signals": 176,
+              "first_halt_date": "2023-11-01"
+            }
+          },
+          "NVDA": {
+            "total_return_pct": 0.05744063701500024,
+            "max_drawdown_pct": -0.1047447322103894,
+            "trade_count": 30,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "META": {
+            "total_return_pct": 0.17045170993605097,
+            "max_drawdown_pct": -0.18948667478041106,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JPM": {
+            "total_return_pct": 0.30850821593763156,
+            "max_drawdown_pct": -0.14398935576625072,
+            "trade_count": 31,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "XOM": {
+            "total_return_pct": 0.1583818625892417,
+            "max_drawdown_pct": -0.13211625823933523,
+            "trade_count": 23,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "WMT": {
+            "total_return_pct": -0.1284754333838195,
+            "max_drawdown_pct": -0.2153337697408423,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 110,
+              "halt_days_pct": 0.09166666666666666,
+              "longest_halt_streak": 110,
+              "halted_at_end": true,
+              "blocked_buy_signals": 5,
+              "first_halt_date": "2025-06-02"
+            }
+          },
+          "KO": {
+            "total_return_pct": 0.26636607550681957,
+            "max_drawdown_pct": -0.18194561465103692,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JNJ": {
+            "total_return_pct": 0.09964305660510209,
+            "max_drawdown_pct": -0.1443204518117136,
+            "trade_count": 35,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "UNH": {
+            "total_return_pct": 0.11725976807102145,
+            "max_drawdown_pct": -0.12560471973880388,
+            "trade_count": 22,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "CAT": {
+            "total_return_pct": -0.040527197882556765,
+            "max_drawdown_pct": -0.14378651063497974,
+            "trade_count": 25,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "HON": {
+            "total_return_pct": 0.14228279951424816,
+            "max_drawdown_pct": -0.11700194287025427,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NEE": {
+            "total_return_pct": 0.04239100388881667,
+            "max_drawdown_pct": -0.12109441056147408,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "APD": {
+            "total_return_pct": 0.04883414693162491,
+            "max_drawdown_pct": -0.1518176683042308,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "DIS": {
+            "total_return_pct": -0.18174392365480696,
+            "max_drawdown_pct": -0.2141243271484075,
+            "trade_count": 27,
+            "halt": {
+              "days": 1200,
+              "halt_days": 406,
+              "halt_days_pct": 0.3383333333333333,
+              "longest_halt_streak": 403,
+              "halted_at_end": true,
+              "blocked_buy_signals": 139,
+              "first_halt_date": "2024-04-09"
+            }
+          },
+          "PLD": {
+            "total_return_pct": -0.20991428246223554,
+            "max_drawdown_pct": -0.2200822290514578,
+            "trade_count": 19,
+            "halt": {
+              "days": 1200,
+              "halt_days": 37,
+              "halt_days_pct": 0.030833333333333334,
+              "longest_halt_streak": 37,
+              "halted_at_end": true,
+              "blocked_buy_signals": 0,
+              "first_halt_date": "2025-09-11"
+            }
+          },
+          "BAC": {
+            "total_return_pct": -0.1649389893995178,
+            "max_drawdown_pct": -0.20198101453413844,
+            "trade_count": 23,
+            "halt": {
+              "days": 1200,
+              "halt_days": 208,
+              "halt_days_pct": 0.17333333333333334,
+              "longest_halt_streak": 207,
+              "halted_at_end": true,
+              "blocked_buy_signals": 35,
+              "first_halt_date": "2025-01-09"
+            }
+          },
+          "PG": {
+            "total_return_pct": -0.1883768483408026,
+            "max_drawdown_pct": -0.1983030585442869,
+            "trade_count": 21,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "threshold": 0.25,
+      "portfolio": {
+        "window": {
+          "start": "2021-03-29",
+          "end": "2025-10-31"
+        },
+        "total_return_pct": -0.21064891912972028,
+        "cagr_pct": -0.05021460287304014,
+        "max_drawdown_pct": -0.30434815443541385,
+        "sharpe": -0.41345035549382403,
+        "trade_count": 146,
+        "hit_rate_pct": 0.410958904109589,
+        "rejected_signals": 4432,
+        "halt": {
+          "days": 1200,
+          "halt_days": 686,
+          "halt_days_pct": 0.5716666666666667,
+          "longest_halt_streak": 686,
+          "halted_at_end": true,
+          "blocked_buy_signals": 3359,
+          "first_halt_date": "2023-03-17"
+        }
+      },
+      "isolated": {
+        "aggregate_total_return_pct": 0.04940320852577096,
+        "accounts": 20,
+        "accounts_ever_halted": 1,
+        "accounts_locked_at_end": 0,
+        "locked_symbols": [],
+        "mean_halt_days_pct": 4.166666666666667e-05,
+        "total_blocked_buy_signals": 0,
+        "total_trades": 537,
+        "per_symbol": {
+          "AAPL": {
+            "total_return_pct": 0.05166740215991128,
+            "max_drawdown_pct": -0.2266506920680366,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "MSFT": {
+            "total_return_pct": 0.13272671996627583,
+            "max_drawdown_pct": -0.13880216171288134,
+            "trade_count": 20,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "GOOGL": {
+            "total_return_pct": 0.06616352187889851,
+            "max_drawdown_pct": -0.1409647683082679,
+            "trade_count": 34,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "AMZN": {
+            "total_return_pct": 0.16562300507819772,
+            "max_drawdown_pct": -0.23649422470564918,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NVDA": {
+            "total_return_pct": 0.05744063701500024,
+            "max_drawdown_pct": -0.1047447322103894,
+            "trade_count": 30,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "META": {
+            "total_return_pct": 0.17045170993605097,
+            "max_drawdown_pct": -0.18948667478041106,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JPM": {
+            "total_return_pct": 0.30850821593763156,
+            "max_drawdown_pct": -0.14398935576625072,
+            "trade_count": 31,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "XOM": {
+            "total_return_pct": 0.1583818625892417,
+            "max_drawdown_pct": -0.13211625823933523,
+            "trade_count": 23,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "WMT": {
+            "total_return_pct": -0.14606566181179115,
+            "max_drawdown_pct": -0.2311709116398527,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "KO": {
+            "total_return_pct": 0.26636607550681957,
+            "max_drawdown_pct": -0.18194561465103692,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JNJ": {
+            "total_return_pct": 0.09964305660510209,
+            "max_drawdown_pct": -0.1443204518117136,
+            "trade_count": 35,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "UNH": {
+            "total_return_pct": 0.11725976807102145,
+            "max_drawdown_pct": -0.12560471973880388,
+            "trade_count": 22,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "CAT": {
+            "total_return_pct": -0.040527197882556765,
+            "max_drawdown_pct": -0.14378651063497974,
+            "trade_count": 25,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "HON": {
+            "total_return_pct": 0.14228279951424816,
+            "max_drawdown_pct": -0.11700194287025427,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NEE": {
+            "total_return_pct": 0.04239100388881667,
+            "max_drawdown_pct": -0.12109441056147408,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "APD": {
+            "total_return_pct": 0.04883414693162491,
+            "max_drawdown_pct": -0.1518176683042308,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "DIS": {
+            "total_return_pct": -0.09866220096407108,
+            "max_drawdown_pct": -0.25048411324732733,
+            "trade_count": 36,
+            "halt": {
+              "days": 1200,
+              "halt_days": 1,
+              "halt_days_pct": 0.0008333333333333334,
+              "longest_halt_streak": 1,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": "2024-08-08"
+            }
+          },
+          "PLD": {
+            "total_return_pct": -0.20991428246223554,
+            "max_drawdown_pct": -0.2200822290514578,
+            "trade_count": 19,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "BAC": {
+            "total_return_pct": -0.1561295631019659,
+            "max_drawdown_pct": -0.22676410695582538,
+            "trade_count": 26,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "PG": {
+            "total_return_pct": -0.1883768483408026,
+            "max_drawdown_pct": -0.1983030585442869,
+            "trade_count": 21,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "threshold": 0.3,
+      "portfolio": {
+        "window": {
+          "start": "2021-03-29",
+          "end": "2025-10-31"
+        },
+        "total_return_pct": -0.24601614738384203,
+        "cagr_pct": -0.05965006841797005,
+        "max_drawdown_pct": -0.34191795417689014,
+        "sharpe": -0.4823537308266649,
+        "trade_count": 156,
+        "hit_rate_pct": 0.3974358974358974,
+        "rejected_signals": 4357,
+        "halt": {
+          "days": 1200,
+          "halt_days": 653,
+          "halt_days_pct": 0.5441666666666667,
+          "longest_halt_streak": 644,
+          "halted_at_end": true,
+          "blocked_buy_signals": 3267,
+          "first_halt_date": "2023-04-19"
+        }
+      },
+      "isolated": {
+        "aggregate_total_return_pct": 0.04940320852577096,
+        "accounts": 20,
+        "accounts_ever_halted": 0,
+        "accounts_locked_at_end": 0,
+        "locked_symbols": [],
+        "mean_halt_days_pct": 0.0,
+        "total_blocked_buy_signals": 0,
+        "total_trades": 537,
+        "per_symbol": {
+          "AAPL": {
+            "total_return_pct": 0.05166740215991128,
+            "max_drawdown_pct": -0.2266506920680366,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "MSFT": {
+            "total_return_pct": 0.13272671996627583,
+            "max_drawdown_pct": -0.13880216171288134,
+            "trade_count": 20,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "GOOGL": {
+            "total_return_pct": 0.06616352187889851,
+            "max_drawdown_pct": -0.1409647683082679,
+            "trade_count": 34,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "AMZN": {
+            "total_return_pct": 0.16562300507819772,
+            "max_drawdown_pct": -0.23649422470564918,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NVDA": {
+            "total_return_pct": 0.05744063701500024,
+            "max_drawdown_pct": -0.1047447322103894,
+            "trade_count": 30,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "META": {
+            "total_return_pct": 0.17045170993605097,
+            "max_drawdown_pct": -0.18948667478041106,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JPM": {
+            "total_return_pct": 0.30850821593763156,
+            "max_drawdown_pct": -0.14398935576625072,
+            "trade_count": 31,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "XOM": {
+            "total_return_pct": 0.1583818625892417,
+            "max_drawdown_pct": -0.13211625823933523,
+            "trade_count": 23,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "WMT": {
+            "total_return_pct": -0.14606566181179115,
+            "max_drawdown_pct": -0.2311709116398527,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "KO": {
+            "total_return_pct": 0.26636607550681957,
+            "max_drawdown_pct": -0.18194561465103692,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JNJ": {
+            "total_return_pct": 0.09964305660510209,
+            "max_drawdown_pct": -0.1443204518117136,
+            "trade_count": 35,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "UNH": {
+            "total_return_pct": 0.11725976807102145,
+            "max_drawdown_pct": -0.12560471973880388,
+            "trade_count": 22,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "CAT": {
+            "total_return_pct": -0.040527197882556765,
+            "max_drawdown_pct": -0.14378651063497974,
+            "trade_count": 25,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "HON": {
+            "total_return_pct": 0.14228279951424816,
+            "max_drawdown_pct": -0.11700194287025427,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NEE": {
+            "total_return_pct": 0.04239100388881667,
+            "max_drawdown_pct": -0.12109441056147408,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "APD": {
+            "total_return_pct": 0.04883414693162491,
+            "max_drawdown_pct": -0.1518176683042308,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "DIS": {
+            "total_return_pct": -0.09866220096407108,
+            "max_drawdown_pct": -0.25048411324732733,
+            "trade_count": 36,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "PLD": {
+            "total_return_pct": -0.20991428246223554,
+            "max_drawdown_pct": -0.2200822290514578,
+            "trade_count": 19,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "BAC": {
+            "total_return_pct": -0.1561295631019659,
+            "max_drawdown_pct": -0.22676410695582538,
+            "trade_count": 26,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "PG": {
+            "total_return_pct": -0.1883768483408026,
+            "max_drawdown_pct": -0.1983030585442869,
+            "trade_count": 21,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "threshold": 0.35,
+      "portfolio": {
+        "window": {
+          "start": "2021-03-29",
+          "end": "2025-10-31"
+        },
+        "total_return_pct": -0.30570218928201254,
+        "cagr_pct": -0.07638977752419607,
+        "max_drawdown_pct": -0.38636091755651597,
+        "sharpe": -0.6332367236211166,
+        "trade_count": 163,
+        "hit_rate_pct": 0.4049079754601227,
+        "rejected_signals": 4331,
+        "halt": {
+          "days": 1200,
+          "halt_days": 626,
+          "halt_days_pct": 0.5216666666666666,
+          "longest_halt_streak": 624,
+          "halted_at_end": true,
+          "blocked_buy_signals": 3231,
+          "first_halt_date": "2023-06-08"
+        }
+      },
+      "isolated": {
+        "aggregate_total_return_pct": 0.04940320852577096,
+        "accounts": 20,
+        "accounts_ever_halted": 0,
+        "accounts_locked_at_end": 0,
+        "locked_symbols": [],
+        "mean_halt_days_pct": 0.0,
+        "total_blocked_buy_signals": 0,
+        "total_trades": 537,
+        "per_symbol": {
+          "AAPL": {
+            "total_return_pct": 0.05166740215991128,
+            "max_drawdown_pct": -0.2266506920680366,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "MSFT": {
+            "total_return_pct": 0.13272671996627583,
+            "max_drawdown_pct": -0.13880216171288134,
+            "trade_count": 20,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "GOOGL": {
+            "total_return_pct": 0.06616352187889851,
+            "max_drawdown_pct": -0.1409647683082679,
+            "trade_count": 34,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "AMZN": {
+            "total_return_pct": 0.16562300507819772,
+            "max_drawdown_pct": -0.23649422470564918,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NVDA": {
+            "total_return_pct": 0.05744063701500024,
+            "max_drawdown_pct": -0.1047447322103894,
+            "trade_count": 30,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "META": {
+            "total_return_pct": 0.17045170993605097,
+            "max_drawdown_pct": -0.18948667478041106,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JPM": {
+            "total_return_pct": 0.30850821593763156,
+            "max_drawdown_pct": -0.14398935576625072,
+            "trade_count": 31,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "XOM": {
+            "total_return_pct": 0.1583818625892417,
+            "max_drawdown_pct": -0.13211625823933523,
+            "trade_count": 23,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "WMT": {
+            "total_return_pct": -0.14606566181179115,
+            "max_drawdown_pct": -0.2311709116398527,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "KO": {
+            "total_return_pct": 0.26636607550681957,
+            "max_drawdown_pct": -0.18194561465103692,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "JNJ": {
+            "total_return_pct": 0.09964305660510209,
+            "max_drawdown_pct": -0.1443204518117136,
+            "trade_count": 35,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "UNH": {
+            "total_return_pct": 0.11725976807102145,
+            "max_drawdown_pct": -0.12560471973880388,
+            "trade_count": 22,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "CAT": {
+            "total_return_pct": -0.040527197882556765,
+            "max_drawdown_pct": -0.14378651063497974,
+            "trade_count": 25,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "HON": {
+            "total_return_pct": 0.14228279951424816,
+            "max_drawdown_pct": -0.11700194287025427,
+            "trade_count": 29,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "NEE": {
+            "total_return_pct": 0.04239100388881667,
+            "max_drawdown_pct": -0.12109441056147408,
+            "trade_count": 28,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "APD": {
+            "total_return_pct": 0.04883414693162491,
+            "max_drawdown_pct": -0.1518176683042308,
+            "trade_count": 24,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "DIS": {
+            "total_return_pct": -0.09866220096407108,
+            "max_drawdown_pct": -0.25048411324732733,
+            "trade_count": 36,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "PLD": {
+            "total_return_pct": -0.20991428246223554,
+            "max_drawdown_pct": -0.2200822290514578,
+            "trade_count": 19,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "BAC": {
+            "total_return_pct": -0.1561295631019659,
+            "max_drawdown_pct": -0.22676410695582538,
+            "trade_count": 26,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          },
+          "PG": {
+            "total_return_pct": -0.1883768483408026,
+            "max_drawdown_pct": -0.1983030585442869,
+            "trade_count": 21,
+            "halt": {
+              "days": 1200,
+              "halt_days": 0,
+              "halt_days_pct": 0.0,
+              "longest_halt_streak": 0,
+              "halted_at_end": false,
+              "blocked_buy_signals": 0,
+              "first_halt_date": null
+            }
+          }
+        }
+      }
+    }
+  ]
+}
