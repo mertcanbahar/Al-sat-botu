@@ -68,6 +68,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from alsatbotu.config import SYMBOL_CATEGORIES
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Signal, evaluate
+from backtest.halt_policy import HALT_DELEGATED_TO_POLICY
 from engine.risk import evaluate_buy, is_drawdown_halted
 from portfolio.state import PortfolioState, close_position, open_position, update_peak_equity
 
@@ -256,6 +257,9 @@ class SimResult:
     # (True = o gün yeni ALIM yasak). halt_sweep.py bunu kilitlenme
     # ölçümü için kullanır.
     halt_flags: list[bool] = field(default_factory=list)
+    # Yalnızca `halt_controller` ile koşulduğunda dolar: durum makinesinin
+    # gerçekleşen geçişleri (halted/released/reset/stopped).
+    halt_events: list = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------
@@ -268,7 +272,16 @@ def simulate(
     price_data: dict[str, list[dict]],
     starting_capital: float,
     max_drawdown_pct: Optional[float] = None,
+    halt_controller=None,
 ) -> SimResult:
+    """Tek bir hesabı (portföy ya da izole sembol) baştan sona simüle eder.
+
+    `halt_controller` verilirse (backtest.halt_policy.HaltController) halt
+    kararı o durum makinesinden gelir: her gün equity işaretlenir, ALIM'lar
+    *bir önceki* işaretlemenin bıraktığı bayrağa göre reddedilir ve
+    `evaluate_buy()` kendi eşiğini hesaplamaz. Verilmezse davranış
+    değişmez: canlı koddaki anlık `is_drawdown_halted()` kuralı işler.
+    """
     symbols = [e["symbol"] for e in universe if e["symbol"] in price_data]
     categories = {e["symbol"]: e["category"] for e in universe}
     rows_by_symbol = {s: price_data[s] for s in symbols}
@@ -318,8 +331,18 @@ def simulate(
                     continue
                 fill = buy_fill_price(open_price)
                 atr = indicators.get("atr")
+                if halt_controller is not None and halt_controller.blocks_buys():
+                    rejected.append(
+                        RejectedSignal(
+                            symbol, d, "BUY",
+                            [halt_controller.block_reason(state, current_prices)],
+                        )
+                    )
+                    pending.pop(symbol, None)
+                    continue
                 decision = evaluate_buy(
-                    state, symbol, category, fill, atr, current_prices, max_drawdown_pct
+                    state, symbol, category, fill, atr, current_prices,
+                    HALT_DELEGATED_TO_POLICY if halt_controller is not None else max_drawdown_pct,
                 )
                 if not decision.approved:
                     rejected.append(RejectedSignal(symbol, d, "BUY", decision.reasons))
@@ -378,9 +401,15 @@ def simulate(
             current_prices[symbol] = rows_by_symbol[symbol][idx]["close"]
         for symbol in state.open_positions:
             days_in_position[symbol] = days_in_position.get(symbol, 0) + 1
-        equity = update_peak_equity(state, current_prices)
-        equity_curve.append((d, equity))
-        halt_flags.append(is_drawdown_halted(equity, state.peak_equity, max_drawdown_pct))
+        if halt_controller is not None:
+            event = halt_controller.mark(state, current_prices, d)
+            equity = event.equity
+            equity_curve.append((d, equity))
+            halt_flags.append(halt_controller.blocks_buys())
+        else:
+            equity = update_peak_equity(state, current_prices)
+            equity_curve.append((d, equity))
+            halt_flags.append(is_drawdown_halted(equity, state.peak_equity, max_drawdown_pct))
 
         # 3) Compute tomorrow's decisions from today's close (no lookahead:
         #    only rows up to and including index `idx` are ever passed in).
@@ -406,6 +435,7 @@ def simulate(
         window_start=sim_dates[0],
         window_end=sim_dates[-1],
         halt_flags=halt_flags,
+        halt_events=list(halt_controller.events) if halt_controller is not None else [],
     )
 
 

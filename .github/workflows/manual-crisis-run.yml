@@ -1,0 +1,67 @@
+name: Manual crisis-period halt run
+
+# Kriz dönemi koşusunu GERÇEK Twelve Data verisiyle tekrarlar. Yerel/ajan
+# ortamında API anahtarı ve dış ağ olmadığı için o koşu sentetik kriz
+# senaryosuyla yapılıyor (backtest/crisis_data.py); bu workflow aynı üç kolu
+# (legacy %20 / v1 / v1 taban%30) gerçek fiyatlarla koşar.
+#
+# Not: Twelve Data'nın ücretsiz katmanı 2008'e kadar geri gitmeyebilir --
+# `years` girdisi sağlayıcının verdiği kadarıyla sınırlıdır. Koşu, hangi
+# pencereyi gerçekten kapsadığını raporun başında yazar.
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Years of daily history to request (17 covers 2008 + 2020)"
+        required: false
+        default: "17"
+
+permissions:
+  contents: write
+
+jobs:
+  crisis-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the crisis-period halt comparison on real data
+        run: |
+          python backtest/crisis_run.py \
+            --real \
+            --years "${{ inputs.years || '17' }}" \
+            --out-dir backtest/results/crisis
+
+      - name: Commit and push crisis-run results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/crisis
+          if git diff --cached --quiet; then
+            echo "No crisis-run changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: update crisis-period halt run results"
+          # Bu iş de commit etmeden önce dakikalarca veri çekiyor; bu sırada
+          # main altından kayabilir (halt sweep ile aynı yarış).
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main and retrying..."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::Failed to push crisis-run results after 5 attempts."
+          exit 1
