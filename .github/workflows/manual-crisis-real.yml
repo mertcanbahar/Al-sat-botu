@@ -1,0 +1,75 @@
+name: Manual crisis run on real data (halt off vs. trend gate)
+
+# A (halt kapalı) ve E (trend kapısı) kollarını GERÇEK Twelve Data geçmişiyle
+# uzun bir pencerede karşılaştırır. Sentetik kriz senaryoları branch'te
+# koşuldu; bu workflow aynı iki kolu gerçek veriye taşır.
+#
+# E kolu histerezisli risk motorunu gerektirir; o mekanizma ölçüldükten sonra
+# geri alındı (bkz. backtest/halt_threshold_findings.md). Bu yüzden job,
+# mekanizmanın yaşadığı son commit olan 1fc8e31'i ayrı bir dizine açar,
+# trend-çıkışı patch'ini uygular ve simülasyonu ona karşı koşar. main'deki
+# canlı risk motoruna dokunulmaz.
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Kaç yıllık günlük geçmiş istensin (Twelve Data planı sınırlayabilir)"
+        required: false
+        default: "20"
+
+permissions:
+  contents: write
+
+jobs:
+  crisis-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 1fc8e31'e erişmek için tam geçmiş gerekli
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Histerezisli motoru aç ve trend patch'ini uygula
+        run: |
+          mkdir -p /tmp/crisis-engine
+          git archive 1fc8e31 | tar -x -C /tmp/crisis-engine
+          git apply --directory=/tmp/crisis-engine backtest/crisis_trend_release.patch \
+            || (cd /tmp/crisis-engine && patch -p1 < "$GITHUB_WORKSPACE/backtest/crisis_trend_release.patch")
+          python -c "import sys; sys.path.insert(0,'/tmp/crisis-engine'); from engine.risk import HaltPolicy; \
+            assert 'trend_ok_by_date' in HaltPolicy.__dataclass_fields__; print('trend kapısı motoru hazır')"
+
+      - name: Gerçek veriyle A ve E kollarını koş
+        env:
+          ALSATBOTU_CRISIS_ENGINE_ROOT: /tmp/crisis-engine
+        run: python backtest/crisis_multi.py --real "${{ inputs.years || '20' }}"
+
+      - name: Sonucu commit'le ve push et
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/crisis_real.json
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+            exit 0
+          fi
+          git commit -m "chore: update real-data crisis run (halt off vs. trend gate)"
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push reddedildi (deneme $attempt), rebase edip tekrar deneniyor..."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+          done
+          echo "::error::Sonuç 5 denemede push edilemedi."
+          exit 1

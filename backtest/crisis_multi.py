@@ -60,6 +60,7 @@ from backtest.portfolio_backtest import (  # noqa: E402
     BACKTEST_SYMBOLS,
     STARTING_CAPITAL,
     compute_curve_metrics,
+    load_price_data,
     simulate,
 )
 from engine.risk import HaltPolicy  # noqa: E402
@@ -175,6 +176,8 @@ ARMS = {
     ),
 }
 
+ARMS_ALL = dict(ARMS)
+
 # Alt küme koşmak için: ALSATBOTU_CRISIS_ARMS="D_histerezis_reset120"
 _selected = os.environ.get("ALSATBOTU_CRISIS_ARMS", "").strip()
 if _selected:
@@ -209,7 +212,100 @@ def market_trend_flags(data: dict[str, list[dict]], window: int = 50) -> dict[st
     return flags
 
 
+# --------------------------------------------------------------------------
+# Gerçek veri modu: sentetik kriz yerine gerçek piyasa geçmişi
+# --------------------------------------------------------------------------
+
+# Gerçek veride kriz penceresi uydurulmaz; bilinen stres dönemleri ayrıca
+# raporlanır (veri o tarihleri kapsıyorsa).
+STRESS_WINDOWS = {
+    "2008_GFC": ("2007-10-01", "2009-06-30"),
+    "2011_euro": ("2011-05-01", "2011-12-31"),
+    "2018_Q4": ("2018-09-01", "2018-12-31"),
+    "2020_covid": ("2020-02-01", "2020-06-30"),
+    "2022_ayi": ("2022-01-01", "2022-12-31"),
+}
+
+
+def window_metrics(curve: list, start: str, end: str) -> Optional[dict]:
+    """Equity eğrisinin bir alt penceresindeki getiri ve maks. drawdown."""
+    seg = [(d, v) for d, v in curve if start <= d <= end]
+    if len(seg) < 2:
+        return None
+    values = [v for _, v in seg]
+    peak = values[0]
+    mdd = 0.0
+    for v in values:
+        peak = max(peak, v)
+        mdd = min(mdd, (v - peak) / peak)
+    return {
+        "start": seg[0][0], "end": seg[-1][0], "days": len(seg),
+        "total_return_pct": values[-1] / values[0] - 1.0 if values[0] else None,
+        "max_drawdown_pct": mdd,
+    }
+
+
+def run_real(years: int) -> None:
+    """Gerçek Twelve Data geçmişiyle A (halt kapalı) ve E (trend kapısı) kolları."""
+    print(f"Gerçek veri yükleniyor (Twelve Data, {years} yıl, {len(BACKTEST_SYMBOLS)} sembol)...")
+    data = load_price_data(BACKTEST_SYMBOLS, years)
+    if not data:
+        raise SystemExit("Hiçbir sembol için veri alınamadı (API anahtarı / kota?).")
+    universe = [e for e in BACKTEST_SYMBOLS if e["symbol"] in data]
+    n = min(len(rows) for rows in data.values())
+    print(f"{len(universe)} sembol, en kısa seri {n} mum.")
+
+    trend_flags = market_trend_flags(data)
+    out = {
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "synthetic": False,
+        "years_requested": years,
+        "symbols": [e["symbol"] for e in universe],
+        "excluded_symbols": [e["symbol"] for e in BACKTEST_SYMBOLS if e["symbol"] not in data],
+        "arms": {},
+    }
+
+    for name in ("A_halt_kapali", "E_trend_kapisi"):
+        policy = ARMS_ALL[name]
+        if name == "E_trend_kapisi":
+            policy = replace(policy, trend_ok_by_date=trend_flags)
+        sim = simulate(universe, data, STARTING_CAPITAL, halt_policy=policy)
+        total, cagr, dd, sharpe = compute_curve_metrics(sim.equity_curve)
+        stress = {
+            label: window_metrics(sim.equity_curve, a, b)
+            for label, (a, b) in STRESS_WINDOWS.items()
+        }
+        out["arms"][name] = {
+            "window": {"start": sim.window_start, "end": sim.window_end},
+            "total_return_pct": total, "cagr_pct": cagr,
+            "max_drawdown_pct": dd, "sharpe": sharpe,
+            "trade_count": len(sim.trades),
+            "halt_days": sum(1 for f in sim.halt_flags if f),
+            "halt_days_pct": sum(1 for f in sim.halt_flags if f) / max(len(sim.halt_flags), 1),
+            "halted_at_end": bool(sim.halt_flags and sim.halt_flags[-1]),
+            "stopped": sim.stopped,
+            "events": [{"date": d, "kind": t, "detail": det} for d, t, det in sim.halt_transitions],
+            "stress_windows": {k: v for k, v in stress.items() if v},
+        }
+        a = out["arms"][name]
+        print(f"\n{name}: {a['window']['start']} → {a['window']['end']}")
+        print(f"  getiri {total*100:+.2f}%  CAGR {cagr*100:+.2f}%  Sharpe {sharpe:.2f}  maksDD {dd*100:.2f}%  işlem {len(sim.trades)}")
+        print(f"  halt {a['halt_days']} gün ({a['halt_days_pct']*100:.1f}%), sonda kilitli: {a['halted_at_end']}")
+        for e in a["events"]:
+            print(f"    [{e['date']}] {e['kind']}: {e['detail']}")
+        for label, m in a["stress_windows"].items():
+            print(f"    {label}: getiri {m['total_return_pct']*100:+.2f}%, maksDD {m['max_drawdown_pct']*100:.2f}% ({m['start']}→{m['end']})")
+
+    dest = Path(__file__).resolve().parent / "results" / "crisis_real.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    print(f"\nSonuç: {dest}")
+
+
 def main() -> None:
+    if sys.argv[1] == "--real":
+        run_real(int(sys.argv[2]) if len(sys.argv) > 2 else 20)
+        return
     shape = sys.argv[1]
     n_seeds = int(sys.argv[2]) if len(sys.argv) > 2 else 6
     results = []
