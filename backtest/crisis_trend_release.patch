@@ -1,5 +1,5 @@
---- /dev/fd/63	2026-09-08 08:53:46.020475795 +0000
-+++ /tmp/claude-0/-home-user-Al-sat-botu/4e468746-9562-5ac1-9c95-40b15726b772/scratchpad/verify-engine/engine/risk.py	2026-09-08 08:53:46.020475795 +0000
+--- a/engine/risk.py
++++ b/engine/risk.py
 @@ -64,6 +64,10 @@
      reset_fraction: float = HALT_RESET_FRACTION
      max_resets: int = MAX_HALT_RESETS

@@ -54,8 +54,7 @@ jobs:
         run: |
           mkdir -p /tmp/crisis-engine
           git archive 1fc8e31 | tar -x -C /tmp/crisis-engine
-          git apply --directory=/tmp/crisis-engine backtest/crisis_trend_release.patch \
-            || (cd /tmp/crisis-engine && patch -p1 < "$GITHUB_WORKSPACE/backtest/crisis_trend_release.patch")
+          patch -p1 -d /tmp/crisis-engine < backtest/crisis_trend_release.patch
           python -c "import sys; sys.path.insert(0,'/tmp/crisis-engine'); from engine.risk import HaltPolicy; \
             assert 'trend_ok_by_date' in HaltPolicy.__dataclass_fields__; print('trend kapısı motoru hazır')"
 
