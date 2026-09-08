@@ -28,6 +28,7 @@ on:
       - .github/workflows/manual-crisis-real.yml
       - backtest/crisis_multi.py
       - backtest/crisis_trend_release.patch
+      - backtest/portfolio_backtest.py
 
 permissions:
   contents: write
