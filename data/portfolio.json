@@ -1,6 +1,10 @@
 {
-  "cash": 4.547473508864641e-13,
+  "cash": 0.0,
   "closed_trades": [],
+  "halt_resets": 0,
+  "halted": false,
+  "halted_marks": 0,
+  "halted_since": null,
   "open_positions": {
     "KO": {
       "category": "consumer",
@@ -9,6 +13,14 @@
       "quantity": 32.554041976879674,
       "stop_price": 85.18309356847575,
       "symbol": "KO"
+    },
+    "META": {
+      "category": "tech",
+      "entry_date": "2026-09-08T00:00:00+00:00",
+      "entry_price": 613.47998,
+      "quantity": 7.412586648491189e-16,
+      "stop_price": 573.9393944055744,
+      "symbol": "META"
     },
     "NVDA": {
       "category": "tech",
@@ -28,5 +40,7 @@
     }
   },
   "peak_equity": 10000.0,
-  "starting_capital": 10000.0
+  "starting_capital": 10000.0,
+  "stop_reason": null,
+  "stopped": false
 }
