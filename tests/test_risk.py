@@ -234,3 +234,26 @@ def test_latching_policy_never_releases():
     for _ in range(100):
         update_halt_state(state, {}, latching)
     assert state.halted is True
+
+
+# -- Günlük raporun halt satırı (canlı izleme) ------------------------------
+
+
+def test_daily_report_halt_line_covers_all_three_states():
+    """Halt durumu raporda her gün görünmeli, yalnızca sorun varken değil."""
+    from scripts.daily_report import halt_status_line
+
+    calm = PortfolioState(cash=95_000.0, starting_capital=100_000.0, peak_equity=100_000.0)
+    line = halt_status_line(calm, 95_000.0)
+    assert "yok" in line and "%5.00" in line  # drawdown ve eşiğe kalan mesafe görünür
+
+    halted = PortfolioState(cash=80_000.0, starting_capital=100_000.0, peak_equity=100_000.0)
+    for _ in range(3):
+        update_halt_state(halted, {})
+    line = halt_status_line(halted, 80_000.0)
+    assert "AKTİF" in line and "trend" in line  # çıkış koşulu yazılı
+
+    stopped = PortfolioState(cash=40_000.0, starting_capital=100_000.0, peak_equity=100_000.0)
+    update_halt_state(stopped, {})
+    line = halt_status_line(stopped, 40_000.0)
+    assert "KALICI DURDURMA" in line and "insan onayı" in line
