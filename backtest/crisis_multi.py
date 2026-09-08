@@ -209,13 +209,21 @@ def main() -> None:
                 "events": events,
             }
         results.append(row)
-        c = row["arms"]
+        # Özet satırı hangi kolların koşulduğuna göre kurulur (alt küme
+        # koşularında A/B/C mevcut olmayabilir).
+        parts = []
+        for name, arm in row["arms"].items():
+            ev = "".join(
+                f" {e['kind']}@{e['phase']}" for e in arm["events"]
+            ) or " olay-yok"
+            parts.append(
+                f"{name} {arm['total_return_pct']*100:+.1f}%"
+                f"{'/kilit' if arm['halted_at_end'] else ''}"
+                f"{'/DURDU' if arm['stopped'] else ''}"
+                f" [{ev.strip()}]"
+            )
         print(f"[{shape}] tohum {seed}: B&H {row['bh_total']*100:+.1f}%/DD {bh_dd*100:.1f}% | "
-              f"A {c['A_halt_kapali']['total_return_pct']*100:+.1f}% | "
-              f"B {c['B_mandal20']['total_return_pct']*100:+.1f}% (kilit {c['B_mandal20']['halted_at_end']}) | "
-              f"C {c['C_histerezis']['total_return_pct']*100:+.1f}% "
-              f"({[e['kind']+'@'+e['phase'] for e in c['C_histerezis']['events']]})",
-              flush=True)
+              + " | ".join(parts), flush=True)
 
     out = (
         Path(__file__).resolve().parent / "results" / "synthetic"
