@@ -1,0 +1,229 @@
+{
+  "shape": "cift_dipli",
+  "runs": [
+    {
+      "seed": 11,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2024-04-08",
+        "recovery_end": "2025-03-24"
+      },
+      "bh_total": 0.27685596737077844,
+      "bh_dd": -0.43069960793638934,
+      "arms": {
+        "D_histerezis_reset120": {
+          "total_return_pct": 0.5228750648307221,
+          "sharpe": 0.8488941692718829,
+          "max_drawdown_pct": -0.2001686587133597,
+          "trade_count": 135,
+          "halt_days": 120,
+          "halt_days_pct": 0.1,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2023-11-22",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2024-05-08",
+              "kind": "reset",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 12,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2024-04-08",
+        "recovery_end": "2025-03-24"
+      },
+      "bh_total": 0.1572334285189867,
+      "bh_dd": -0.3350526081083038,
+      "arms": {
+        "D_histerezis_reset120": {
+          "total_return_pct": 0.025060181865504516,
+          "sharpe": 0.10797770413767122,
+          "max_drawdown_pct": -0.25222398603754737,
+          "trade_count": 147,
+          "halt_days": 120,
+          "halt_days_pct": 0.1,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2024-01-02",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2024-06-18",
+              "kind": "reset",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 13,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2024-04-08",
+        "recovery_end": "2025-03-24"
+      },
+      "bh_total": -0.03448700427823348,
+      "bh_dd": -0.46360908391346956,
+      "arms": {
+        "D_histerezis_reset120": {
+          "total_return_pct": -0.14761604026174802,
+          "sharpe": -0.2646917403753387,
+          "max_drawdown_pct": -0.3689110712731674,
+          "trade_count": 96,
+          "halt_days": 675,
+          "halt_days_pct": 0.5625,
+          "halted_at_end": true,
+          "stopped": true,
+          "events": [
+            {
+              "date": "2022-11-23",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2023-05-10",
+              "kind": "reset",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2023-09-04",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2024-02-19",
+              "kind": "reset",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2024-03-04",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2024-08-19",
+              "kind": "stopped",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 14,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2024-04-08",
+        "recovery_end": "2025-03-24"
+      },
+      "bh_total": 0.3450130114913723,
+      "bh_dd": -0.4382523613168022,
+      "arms": {
+        "D_histerezis_reset120": {
+          "total_return_pct": 0.2623887382759533,
+          "sharpe": 0.4485483438111384,
+          "max_drawdown_pct": -0.256175288649362,
+          "trade_count": 175,
+          "halt_days": 120,
+          "halt_days_pct": 0.1,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2024-06-03",
+              "kind": "halted",
+              "phase": "toparlanma"
+            },
+            {
+              "date": "2024-11-18",
+              "kind": "reset",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 15,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2024-04-08",
+        "recovery_end": "2025-03-24"
+      },
+      "bh_total": -0.018374341529511562,
+      "bh_dd": -0.5483649035864299,
+      "arms": {
+        "D_histerezis_reset120": {
+          "total_return_pct": 0.1707548932766143,
+          "sharpe": 0.3149969432768587,
+          "max_drawdown_pct": -0.23359406708503458,
+          "trade_count": 152,
+          "halt_days": 120,
+          "halt_days_pct": 0.1,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-05-31",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2022-11-15",
+              "kind": "reset",
+              "phase": "kriz_oncesi"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 16,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2024-04-08",
+        "recovery_end": "2025-03-24"
+      },
+      "bh_total": 0.17958000681776132,
+      "bh_dd": -0.6186823847436301,
+      "arms": {
+        "D_histerezis_reset120": {
+          "total_return_pct": 0.9231575796948157,
+          "sharpe": 1.0780980787820207,
+          "max_drawdown_pct": -0.21115384239359491,
+          "trade_count": 135,
+          "halt_days": 120,
+          "halt_days_pct": 0.1,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2023-10-31",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2024-04-16",
+              "kind": "reset",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
