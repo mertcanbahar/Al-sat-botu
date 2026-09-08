@@ -1,7 +1,15 @@
 {
-  "cash": 2867.034476903793,
+  "cash": 4.547473508864641e-13,
   "closed_trades": [],
   "open_positions": {
+    "KO": {
+      "category": "consumer",
+      "entry_date": "2026-09-04T00:00:00+00:00",
+      "entry_price": 88.07,
+      "quantity": 32.554041976879674,
+      "stop_price": 85.18309356847575,
+      "symbol": "KO"
+    },
     "NVDA": {
       "category": "tech",
       "entry_date": "2026-09-04T00:00:00+00:00",
