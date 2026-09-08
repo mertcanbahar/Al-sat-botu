@@ -1,0 +1,336 @@
+{
+  "shape": "kisa_sert",
+  "runs": [
+    {
+      "seed": 11,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.5245778394694338,
+      "bh_dd": -0.39793511597937886,
+      "arms": {
+        "A_halt_kapali": {
+          "total_return_pct": 0.6441061467300235,
+          "sharpe": 0.963434014124159,
+          "max_drawdown_pct": -0.18445012973943206,
+          "trade_count": 136,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "B_mandal20": {
+          "total_return_pct": 0.6441061467300235,
+          "sharpe": 0.963434014124159,
+          "max_drawdown_pct": -0.18445012973943206,
+          "trade_count": 136,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "C_histerezis": {
+          "total_return_pct": 0.6441061467300235,
+          "sharpe": 0.963434014124159,
+          "max_drawdown_pct": -0.18445012973943206,
+          "trade_count": 136,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        }
+      }
+    },
+    {
+      "seed": 12,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.42768010408144974,
+      "bh_dd": -0.2640801361611886,
+      "arms": {
+        "A_halt_kapali": {
+          "total_return_pct": 0.32219113852694914,
+          "sharpe": 0.4794231493052848,
+          "max_drawdown_pct": -0.18175745353683295,
+          "trade_count": 152,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "B_mandal20": {
+          "total_return_pct": 0.32219113852694914,
+          "sharpe": 0.4794231493052848,
+          "max_drawdown_pct": -0.18175745353683295,
+          "trade_count": 152,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "C_histerezis": {
+          "total_return_pct": 0.32219113852694914,
+          "sharpe": 0.4794231493052848,
+          "max_drawdown_pct": -0.18175745353683295,
+          "trade_count": 152,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        }
+      }
+    },
+    {
+      "seed": 13,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.2329254112021082,
+      "bh_dd": -0.29089687662978614,
+      "arms": {
+        "A_halt_kapali": {
+          "total_return_pct": 0.27604894377201794,
+          "sharpe": 0.4670730750139097,
+          "max_drawdown_pct": -0.289830971100468,
+          "trade_count": 130,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "B_mandal20": {
+          "total_return_pct": 0.05957775846606839,
+          "sharpe": 0.20355034057107965,
+          "max_drawdown_pct": -0.21468328140322057,
+          "trade_count": 67,
+          "halt_days": 768,
+          "halt_days_pct": 0.64,
+          "halted_at_end": true,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-11-23",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            }
+          ]
+        },
+        "C_histerezis": {
+          "total_return_pct": 0.16000885025526768,
+          "sharpe": 0.3110626031647268,
+          "max_drawdown_pct": -0.29123478867986324,
+          "trade_count": 125,
+          "halt_days": 120,
+          "halt_days_pct": 0.1,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-11-23",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2023-02-15",
+              "kind": "reset",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2023-08-10",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2023-11-02",
+              "kind": "reset",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 14,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.6503263974187825,
+      "bh_dd": -0.40064420558922115,
+      "arms": {
+        "A_halt_kapali": {
+          "total_return_pct": 0.48430048738284803,
+          "sharpe": 0.7189463637463464,
+          "max_drawdown_pct": -0.15537172301691518,
+          "trade_count": 189,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "B_mandal20": {
+          "total_return_pct": 0.48430048738284803,
+          "sharpe": 0.7189463637463464,
+          "max_drawdown_pct": -0.15537172301691518,
+          "trade_count": 189,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "C_histerezis": {
+          "total_return_pct": 0.48430048738284803,
+          "sharpe": 0.7189463637463464,
+          "max_drawdown_pct": -0.15537172301691518,
+          "trade_count": 189,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        }
+      }
+    },
+    {
+      "seed": 15,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.5203226527346039,
+      "bh_dd": -0.23641362548823022,
+      "arms": {
+        "A_halt_kapali": {
+          "total_return_pct": 0.18667740413679912,
+          "sharpe": 0.3317664367605005,
+          "max_drawdown_pct": -0.24405208538702164,
+          "trade_count": 169,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "B_mandal20": {
+          "total_return_pct": -0.137757593420338,
+          "sharpe": -0.48025530520559095,
+          "max_drawdown_pct": -0.23359406708503458,
+          "trade_count": 30,
+          "halt_days": 894,
+          "halt_days_pct": 0.745,
+          "halted_at_end": true,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-05-31",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            }
+          ]
+        },
+        "C_histerezis": {
+          "total_return_pct": 0.21889744385326404,
+          "sharpe": 0.3742791521120324,
+          "max_drawdown_pct": -0.23359406708503458,
+          "trade_count": 169,
+          "halt_days": 60,
+          "halt_days_pct": 0.05,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-05-31",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2022-08-23",
+              "kind": "reset",
+              "phase": "kriz_oncesi"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 16,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 1.0083912038567542,
+      "bh_dd": -0.33418495444887286,
+      "arms": {
+        "A_halt_kapali": {
+          "total_return_pct": 0.8433311794106069,
+          "sharpe": 0.9848488231916832,
+          "max_drawdown_pct": -0.20098570314058606,
+          "trade_count": 153,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        },
+        "B_mandal20": {
+          "total_return_pct": 0.2647215509595977,
+          "sharpe": 0.49515281000242095,
+          "max_drawdown_pct": -0.20098570314058606,
+          "trade_count": 86,
+          "halt_days": 519,
+          "halt_days_pct": 0.4325,
+          "halted_at_end": true,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2023-11-07",
+              "kind": "halted",
+              "phase": "toparlanma"
+            }
+          ]
+        },
+        "C_histerezis": {
+          "total_return_pct": 0.8593204662212932,
+          "sharpe": 1.0072889600922543,
+          "max_drawdown_pct": -0.20098570314058606,
+          "trade_count": 151,
+          "halt_days": 47,
+          "halt_days_pct": 0.03916666666666667,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2023-11-07",
+              "kind": "halted",
+              "phase": "toparlanma"
+            },
+            {
+              "date": "2024-01-11",
+              "kind": "released",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

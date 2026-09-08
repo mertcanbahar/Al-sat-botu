@@ -1,0 +1,69 @@
+name: Manual crisis run on real data (halt off vs. trend gate)
+
+# A (halt kapalı) ve E (trend kapısı) kollarını GERÇEK Twelve Data geçmişiyle
+# uzun bir pencerede karşılaştırır. Sentetik kriz senaryoları branch'te
+# koşuldu; bu workflow aynı iki kolu gerçek veriye taşır.
+#
+# Trend kapılı halt production'a alındıktan sonra iki kol da doğrudan
+# repodaki risk motoruna karşı koşar; ayrı bir ağaç/patch gerekmiyor.
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Kaç yıllık günlük geçmiş istensin (Twelve Data planı sınırlayabilir)"
+        required: false
+        default: "20"
+  # workflow_dispatch yalnızca dosya default branch'te olduğunda görünür.
+  # Bu koşuyu main'e girmeden yapabilmek için branch'e push tetikleyicisi:
+  # yalnızca bu deneyin dosyaları değiştiğinde ateşlenir, sonuç commit'i
+  # (backtest/results/) tetikleyici yollarda olmadığı için döngü oluşmaz.
+  push:
+    branches:
+      - claude/halt-mechanism-parameter-test-iwlsz2
+    paths:
+      - .github/workflows/manual-crisis-real.yml
+      - backtest/crisis_multi.py
+      - backtest/portfolio_backtest.py
+
+permissions:
+  contents: write
+
+jobs:
+  crisis-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Gerçek veriyle A ve E kollarını koş
+        run: python backtest/crisis_multi.py --real "${{ inputs.years || '20' }}"
+
+      - name: Sonucu commit'le ve push et
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/crisis_real.json
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+            exit 0
+          fi
+          git commit -m "chore: update real-data crisis run (halt off vs. trend gate)"
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push reddedildi (deneme $attempt), rebase edip tekrar deneniyor..."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+          done
+          echo "::error::Sonuç 5 denemede push edilemedi."
+          exit 1
