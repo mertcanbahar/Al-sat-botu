@@ -17,6 +17,17 @@ on:
         description: "Kaç yıllık günlük geçmiş istensin (Twelve Data planı sınırlayabilir)"
         required: false
         default: "20"
+  # workflow_dispatch yalnızca dosya default branch'te olduğunda görünür.
+  # Bu koşuyu main'e girmeden yapabilmek için branch'e push tetikleyicisi:
+  # yalnızca bu deneyin dosyaları değiştiğinde ateşlenir, sonuç commit'i
+  # (backtest/results/) tetikleyici yollarda olmadığı için döngü oluşmaz.
+  push:
+    branches:
+      - claude/halt-mechanism-parameter-test-iwlsz2
+    paths:
+      - .github/workflows/manual-crisis-real.yml
+      - backtest/crisis_multi.py
+      - backtest/crisis_trend_release.patch
 
 permissions:
   contents: write
