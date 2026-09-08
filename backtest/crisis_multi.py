@@ -155,7 +155,26 @@ ARMS = {
         halt_pct=0.20, release_pct=0.10, min_halt_marks=10,
         reset_after_marks=60, reset_fraction=0.5, max_resets=2, hard_floor_pct=0.50,
     ),
+    # C ile tek farkı reset penceresi: 60 gün çöküş süresinden kısa kaldığı
+    # için mekanizma krizin ortasında geri giriyordu (bkz. reset@COKUS_ICI
+    # vakaları). 120 gün bunu kapatıyor mu?
+    "D_histerezis_reset120": HaltPolicy(
+        halt_pct=0.20, release_pct=0.10, min_halt_marks=10,
+        reset_after_marks=120, reset_fraction=0.5, max_resets=2, hard_floor_pct=0.50,
+    ),
 }
+
+# Alt küme koşmak için: ALSATBOTU_CRISIS_ARMS="D_histerezis_reset120"
+_selected = os.environ.get("ALSATBOTU_CRISIS_ARMS", "").strip()
+if _selected:
+    names = [n.strip() for n in _selected.split(",") if n.strip()]
+    unknown = [n for n in names if n not in ARMS]
+    if unknown:
+        raise SystemExit(f"Bilinmeyen kol(lar): {unknown}. Geçerli: {list(ARMS)}")
+    ARMS = {n: ARMS[n] for n in names}
+    ARM_SUFFIX = "_" + "+".join(names)
+else:
+    ARM_SUFFIX = ""
 
 
 def main() -> None:
@@ -198,7 +217,10 @@ def main() -> None:
               f"({[e['kind']+'@'+e['phase'] for e in c['C_histerezis']['events']]})",
               flush=True)
 
-    out = Path(__file__).resolve().parent / "results" / "synthetic" / f"crisis_{shape}.json"
+    out = (
+        Path(__file__).resolve().parent / "results" / "synthetic"
+        / f"crisis_{shape}{ARM_SUFFIX}.json"
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps({"shape": shape, "runs": results}, indent=2), encoding="utf-8"
