@@ -1,0 +1,54 @@
+--- /dev/fd/63	2026-09-08 08:53:46.020475795 +0000
++++ /tmp/claude-0/-home-user-Al-sat-botu/4e468746-9562-5ac1-9c95-40b15726b772/scratchpad/verify-engine/engine/risk.py	2026-09-08 08:53:46.020475795 +0000
+@@ -64,6 +64,10 @@
+     reset_fraction: float = HALT_RESET_FRACTION
+     max_resets: int = MAX_HALT_RESETS
+     hard_floor_pct: float = HALT_HARD_FLOOR_PCT
++    # Trend kapısı (deney): tarih -> "piyasa trendi yukarı mı?" haritası.
++    # Verilirse halt, drawdown toparlanmasını beklemeden trend dönünce de
++    # kalkar. Zaman sayacı yerine duruma bakan çıkış koşulu.
++    trend_ok_by_date: Optional[dict] = None
+ 
+     @property
+     def latching(self) -> bool:
+@@ -168,19 +172,34 @@
+     # -- Halt aktif --------------------------------------------------------
+     state.halted_marks += 1
+ 
++    trend_ok = (
++        policy.trend_ok_by_date is not None
++        and mark_date is not None
++        and bool(policy.trend_ok_by_date.get(mark_date, False))
++    )
+     if (
+         not policy.latching
+         and state.halted_marks >= policy.min_halt_marks
+-        and drawdown <= policy.release_pct
++        and (drawdown <= policy.release_pct or trend_ok)
+     ):
+         state.halted = False
+         state.halted_since = None
+         state.halted_marks = 0
+-        return event(
+-            "released",
+-            f"Drawdown %{drawdown * 100:.2f} <= %{policy.release_pct * 100:.0f}; "
+-            "toparlanma ile halt kalktı.",
+-        )
++        if drawdown <= policy.release_pct:
++            why = f"Drawdown %{drawdown * 100:.2f} <= %{policy.release_pct * 100:.0f}; toparlanma"
++        else:
++            # Trend dönmüş ama equity hâlâ halt bandının içinde. Ölçütü de
++            # güncellemezsek kural ertesi işaretlemede yeniden tetiklenir ve
++            # halt çırpınır. Peak'i, drawdown tam release_pct olacak seviyeye
++            # çekiyoruz: koruma korunur (bir sonraki halt yeni peak'in
++            # halt_pct altında), ama anında yeniden tetiklenmez.
++            old_peak = state.peak_equity
++            state.peak_equity = min(old_peak, equity / (1 - policy.release_pct))
++            why = (
++                "Piyasa trendi yukarı döndü (trend kapısı); peak "
++                f"{old_peak:.2f} -> {state.peak_equity:.2f} çekildi"
++            )
++        return event("released", f"{why} ile halt kalktı.")
+ 
+     # Nakitteki bir hesabın equity'si sabittir: toparlanma yapısal olarak
+     # imkânsız, tek çıkış peak'i aşağı çekmek.

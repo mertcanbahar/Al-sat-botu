@@ -38,6 +38,7 @@ import json
 import random
 import statistics
 import sys
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -155,6 +156,16 @@ ARMS = {
         halt_pct=0.20, release_pct=0.10, min_halt_marks=10,
         reset_after_marks=60, reset_fraction=0.5, max_resets=2, hard_floor_pct=0.50,
     ),
+    # E: zaman sayacı yerine DURUMA bakan çıkış koşulu. Piyasa proxy'si
+    # (20 sembolün eşit ağırlıklı endeksi) kendi SMA50'sinin üstüne çıkınca
+    # halt kalkar; drawdown toparlanması beklenmez. Zaman sayacı yalnızca
+    # uzun bir emniyet ağı olarak kalır (250 işaretleme), böylece trend hiç
+    # dönmezse hesap yine de kilitli kalmaz.
+    # Motor tarafı: crisis_trend_release.patch (1fc8e31 üzerine).
+    "E_trend_kapisi": HaltPolicy(
+        halt_pct=0.20, release_pct=0.10, min_halt_marks=10,
+        reset_after_marks=250, reset_fraction=0.5, max_resets=2, hard_floor_pct=0.50,
+    ),
     # C ile tek farkı reset penceresi: 60 gün çöküş süresinden kısa kaldığı
     # için mekanizma krizin ortasında geri giriyordu (bkz. reset@COKUS_ICI
     # vakaları). 120 gün bunu kapatıyor mu?
@@ -177,6 +188,27 @@ else:
     ARM_SUFFIX = ""
 
 
+def market_trend_flags(data: dict[str, list[dict]], window: int = 50) -> dict[str, bool]:
+    """tarih -> eşit ağırlıklı endeks kendi SMA<window>'unun üstünde mi?
+
+    Look-ahead yok: her gün için yalnızca o güne kadarki (o gün dahil)
+    kapanışlar kullanılır.
+    """
+    symbols = list(data)
+    n = len(data[symbols[0]])
+    index = [sum(data[s][i]["close"] / data[s][0]["close"] for s in symbols) / len(symbols)
+             for i in range(n)]
+    flags: dict[str, bool] = {}
+    for i in range(n):
+        date = data[symbols[0]][i]["timestamp"].date().isoformat()
+        if i + 1 < window:
+            flags[date] = False
+            continue
+        sma = sum(index[i + 1 - window : i + 1]) / window
+        flags[date] = index[i] > sma
+    return flags
+
+
 def main() -> None:
     shape = sys.argv[1]
     n_seeds = int(sys.argv[2]) if len(sys.argv) > 2 else 6
@@ -192,7 +224,10 @@ def main() -> None:
             bh_dd = min(bh_dd, (v - peak) / peak)
 
         row = {"seed": seed, "phases": phases, "bh_total": bh[-1] / bh[0] - 1.0, "bh_dd": bh_dd, "arms": {}}
+        trend_flags = market_trend_flags(data)
         for name, policy in ARMS.items():
+            if name == "E_trend_kapisi":
+                policy = replace(policy, trend_ok_by_date=trend_flags)
             sim = simulate(BACKTEST_SYMBOLS, data, STARTING_CAPITAL, halt_policy=policy)
             total, cagr, dd, sharpe = compute_curve_metrics(sim.equity_curve)
             events = [
