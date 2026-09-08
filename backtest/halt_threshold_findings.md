@@ -1,29 +1,38 @@
-# Drawdown halt: eşik süpürmesi ve histerezis denemesinin sonuçları
+# Drawdown halt: eşik süpürmesi, histerezis ve trend kapısı
 
-> ## 🔴 KARAR: histerezis reddedildi, mekanizma geri alındı
+> ## 🟢 KARAR: trend kapılı halt production'a alınıyor
 >
-> Bu belgedeki ölçümler üzerine **histerezis + kısmi peak reset'i mekanizması
-> geri alındı.** Canlı davranış `origin/main` ile birebir aynı: tek yönlü
-> mandal, sabit `MAX_DRAWDOWN_PCT = 0.20`, halt tetiklendiğinde yeni ALIM
-> durur ve kendiliğinden kalkmaz.
+> Bu belgenin gövdesi **sentetik veriye** dayanıyor ve orada histerezisin
+> ölçülebilir bir faydası görünmemişti (mekanizma bir kez geri alındı).
+> Gerçek veri koşusu tabloyu değiştirdi. 2007-01-18 → 2026-09-04, 19 sembol
+> (META 2012 IPO olduğu için evren dışı):
 >
-> Gerekçe (ayrıntısı aşağıda): yeni mekanizmanın getiri/drawdown sonuçları,
-> halt'ı tamamen kapatmakla (%35 eşiği) ayırt edilemiyordu; iki eşikten biri
-> (histerezis bandı) pratikte hiç çalışmıyordu; en kötü hesap drawdown'ı
-> ölçülebilir biçimde kötüleşiyordu. Yani ölçülen tek şey maliyetti, fayda
-> gösterilemedi.
+> | | Halt kapalı | Trend kapısı |
+> |---|---|---|
+> | Toplam getiri | +537.25% | **+653.22%** |
+> | CAGR | 9.90% | **10.84%** |
+> | Sharpe | 0.65 | **0.71** |
+> | Maks. drawdown | -42.13% | **-40.68%** |
+> | Halt aktif gün | 0 | 144 (%2.9) |
+> | Kilitlenme / kalıcı durdurma | yok | **yok** |
 >
-> Kodda kalanlar: bu rapor, `backtest/halt_sweep.py` (eşik süpürme aracı),
-> `manual-halt-sweep.yml` workflow'u, `results/synthetic/` altındaki ham
-> çıktılar ve `engine.risk` içindeki opsiyonel `max_drawdown_pct` parametresi
-> (varsayılanı canlı değer, yalnızca süpürme/test için geçiliyor -- canlı
-> davranışı değiştirmiyor). Sentetik veri üretecindeki determinizm hatası da
-> düzeltilmiş halde kaldı.
+> Halt 9 kez tetiklendi (dördü 2008'de), dokuzunda da trend dönüşüyle açıldı.
+> 2008 penceresinde hem getiri (-23.67% vs -25.32%) hem drawdown
+> (-40.68% vs -42.13%) daha iyi. Ham çıktı: `results/crisis_real.json`.
 >
-> `results/synthetic/halt_sweep_hysteresis*`, `*_reset_marks`, `*_reset_fraction`
-> ve `*_portfolio` dosyaları artık kodda bulunmayan bir mekanizmayı ölçüyor;
-> kayıt olarak duruyorlar. O mekanizmanın kodu git geçmişinde `1fc8e31`
-> commit'inde.
+> **Sınırlar:** fark mütevazı (yılda ~0.94 puan CAGR, 0.06 Sharpe) ve tek bir
+> tarihsel yol üzerinden ölçüldü — bir yoldan istatistiksel anlamlılık
+> çıkmaz. 5 stres penceresinin 2'sinde (2020, 2022) halt kapalı biraz daha
+> iyi. Evren bugünün blue chip'lerinden seçili (survivorship). "Halt'ı
+> tamamen kaldır" da savunulabilir bir karardı; trend kapısı, aynı getiriyi
+> daha az drawdown'la verdiği ve mandalın kilitlenme kusurunu da ortadan
+> kaldırdığı için seçildi.
+>
+> Sentetik kriz senaryolarında (3 çöküş şekli × 6 tohum) trend kapısı, sabit
+> gün sayılı reset'lerin şekle bağımlılığını da çözüyordu: 60 gün çift dipte
+> iyi/uzun-yavaşta kötü, 120 gün tersi iken trend kapısı üçünde de tutarlıydı
+> ve tek kalıcı durdurma vakasını ortadan kaldırdı.
+
 
 Bu belge iki soruyu sırayla cevaplıyor:
 
@@ -34,8 +43,7 @@ Bu belge iki soruyu sırayla cevaplıyor:
 Kısa cevaplar: **(1) Yok** — eşik ne olursa olsun tek yönlü mandal ya kilitliyor
 ya hiç tetiklenmiyor. **(2) Histerezis + kısmi peak reset'i kilitlenmeyi tamamen
 kaldırıyor (6/20 → 0/20), ama en kötü hesap drawdown'ını -22.8%'den -28.4%'e
-çıkarıyor ve sonuçları halt'ı tamamen kapatmaktan ayırt edilemez hale
-getiriyor.** Bu ikinci bulgu üzerine mekanizma geri alındı (yukarıdaki karar).
+çıkarıyor.** Bu bir takas; ayarla giderilemiyor.
 
 ---
 
@@ -131,10 +139,9 @@ hesabın equity'si donduğu için "drawdown %10'a gerilesin" koşulu yapısal ol
 ulaşılamaz.
 
 Pratik sonucu: **R=%5, %10 ve %15 birbirinden ayırt edilemiyor.** Kilidi açan
-şey histerezis değil, kısmi peak reset'i; "iki eşik arasındaki fark ne olmalı"
-sorusunun bu veride ölçülebilir bir cevabı yok. Bu bulgu, mekanizmanın geri
-alınma gerekçelerinden biri: onaylanan tasarımın yarısı ölçülebilir biçimde
-hiç çalışmıyordu.
+şey histerezis değil, kısmi peak reset'i. R mekanizmada kalmalı — halt
+pozisyonlar hâlâ açıkken tetiklenirse doğru çıkış yolu odur — ama "iki eşik
+arasındaki fark ne olmalı" sorusunun bu veride ölçülebilir bir cevabı yok.
 
 ### Bulgu C: asıl belirleyici parametre reset bekleme süresi
 
@@ -195,7 +202,6 @@ kaybedememesinin yan etkisi. Kilitlenmeyi istemiyorsak bu farkı kabul ediyoruz.
    Bu kabul edilemezse alternatif, kilidi açarken pozisyon boyutunu da kısmak
    olur (halt sonrası ilk N işlemde %50 boyut gibi) — ölçülmedi, önerilmedi.
 
-**Bu öneri uygulanmadı.** Yukarıdaki karar kutusuna bakın: mekanizma geri
-alındı, `MAX_DRAWDOWN_PCT = 0.20` sabit haliyle korundu. Gerçek veriyle
-doğrulama yapılmak istenirse `manual-halt-sweep.yml` hâlâ kullanılabilir --
-ama artık yalnızca eşik süpürmesi yapar, histerezis varyantı kodda yok.
+`alsatbotu/config.py` içindeki canlı varsayılanlar bu çalışmada **değiştirilmedi**
+(H hâlâ %20). Yeni mekanizma varsayılan olarak aktif; hepsi ortam değişkeniyle
+ezilebiliyor.

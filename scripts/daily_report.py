@@ -24,12 +24,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.config import (
     CATEGORY_EXPOSURE_LIMIT_PCT,
+    DRAWDOWN_RELEASE_PCT,
     MAX_DRAWDOWN_PCT,
+    MAX_HALT_RESETS,
     MAX_OPEN_POSITIONS,
     source_for,
 )
 from alsatbotu.data import get_price_history
-from engine.risk import is_drawdown_halted
 from notify.telegram import send_message
 from portfolio.state import PortfolioState, load_state
 
@@ -72,10 +73,22 @@ def _warnings(state: PortfolioState, current_prices: dict[str, float], equity: f
     warnings: list[str] = []
 
     drawdown = (state.peak_equity - equity) / state.peak_equity if state.peak_equity > 0 else 0.0
-    if is_drawdown_halted(equity, state.peak_equity):
+    if state.stopped:
+        warnings.append(
+            f"🛑 BOT KALICI OLARAK DURDURULDU ({state.stop_reason}) — yeni ALIM yok. "
+            "Devam etmesi için insan onayı gerekiyor: "
+            "python scripts/resume_halt.py --onayla"
+        )
+    elif state.halted:
+        # Halt'tan çıkış için gereken equity'yi rakamla söyle: "ne olursa açılır"
+        # sorusunun cevabı raporda görünsün.
+        release_equity = state.peak_equity * (1 - DRAWDOWN_RELEASE_PCT)
         warnings.append(
             f"Drawdown %{drawdown * 100:.2f} — yeni AL sinyalleri durduruldu "
-            f"(limit %{MAX_DRAWDOWN_PCT * 100:.0f})"
+            f"(limit %{MAX_DRAWDOWN_PCT * 100:.0f}, {state.halted_marks} koşudur halt'ta). "
+            f"Halt, piyasa trendi yukarı dönünce ya da equity {release_equity:,.2f} "
+            f"üstüne çıkınca (drawdown %{DRAWDOWN_RELEASE_PCT * 100:.0f}) kalkar; "
+            f"kullanılan reset: {state.halt_resets}/{MAX_HALT_RESETS}"
         )
     elif drawdown >= MAX_DRAWDOWN_PCT * WARN_THRESHOLD:
         warnings.append(

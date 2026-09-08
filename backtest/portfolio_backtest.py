@@ -10,8 +10,8 @@ reimplemented here.
    dedicated sub-account (starting capital / 20) and its own
    `PortfolioState`, so portfolio-wide caps (max positions, category
    exposure) never bind across symbols -- only the per-trade risk sizing
-   and the drawdown halt (`MAX_DRAWDOWN_PCT`, overridable per run via
-   `simulate(..., max_drawdown_pct=...)`) apply, exactly as they would
+   and the drawdown halt (`engine.risk.HaltPolicy`, overridable per run
+   via `simulate(..., halt_policy=...)`) apply, exactly as they would
    for a single-symbol account. This answers "does the rule engine beat
    buy-and-hold for this specific stock?"
 
@@ -65,11 +65,11 @@ from typing import Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from alsatbotu.config import SYMBOL_CATEGORIES
+from alsatbotu.config import SYMBOL_CATEGORIES, TREND_SMA_WINDOW
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Signal, evaluate
-from engine.risk import evaluate_buy, is_drawdown_halted
-from portfolio.state import PortfolioState, close_position, open_position, update_peak_equity
+from engine.risk import HaltPolicy, evaluate_buy, update_halt_state
+from portfolio.state import PortfolioState, close_position, open_position
 
 # --------------------------------------------------------------------------
 # Backtest universe
@@ -163,6 +163,38 @@ def load_price_data(
         if i < len(symbols) - 1:
             time.sleep(sleep_seconds)
     return data
+
+
+def market_trend_flags(
+    data: dict[str, list[dict]], window: int = TREND_SMA_WINDOW
+) -> dict[str, bool]:
+    """tarih -> eşit ağırlıklı endeks kendi SMA<window>'unun üstünde mi?
+
+    Halt'ın trend kapısının backtest tarafı; canlı karşılığı
+    `scripts/run_portfolio.py` içinde aynı formülle hesaplanır.
+
+    Semboller farklı uzunlukta olabilir, o yüzden endeks tarih ekseninde
+    kurulur: her sembol kendi ilk kapanışına normalize edilir ve her gün
+    yalnızca o gün verisi olan semboller ortalamaya girer. Look-ahead yok:
+    her gün için yalnızca o güne kadarki (o gün dahil) kapanışlar kullanılır.
+    """
+    by_date: dict[str, list[float]] = {}
+    for rows in data.values():
+        if not rows or not rows[0]["close"]:
+            continue
+        base = rows[0]["close"]
+        for row in rows:
+            by_date.setdefault(row["timestamp"].date().isoformat(), []).append(row["close"] / base)
+
+    dates = sorted(by_date)
+    index = [sum(by_date[d]) / len(by_date[d]) for d in dates]
+    flags: dict[str, bool] = {}
+    for i, date in enumerate(dates):
+        if i + 1 < window:
+            flags[date] = False
+            continue
+        flags[date] = index[i] > sum(index[i + 1 - window : i + 1]) / window
+    return flags
 
 
 def generate_synthetic_data(symbols: Sequence[dict], years: int, seed: int = 42) -> dict[str, list[dict]]:
@@ -266,6 +298,11 @@ class SimResult:
     # (True = o gün yeni ALIM yasak). halt_sweep.py bunu kilitlenme
     # ölçümü için kullanır.
     halt_flags: list[bool] = field(default_factory=list)
+    # (tarih, geçiş, açıklama) -- "halted" / "released" / "reset" / "stopped".
+    halt_transitions: list[tuple[str, str, str]] = field(default_factory=list)
+    halt_resets: int = 0
+    stopped: bool = False
+    stop_reason: Optional[str] = None
 
 
 # --------------------------------------------------------------------------
@@ -277,7 +314,8 @@ def simulate(
     universe: Sequence[dict],
     price_data: dict[str, list[dict]],
     starting_capital: float,
-    max_drawdown_pct: Optional[float] = None,
+    halt_policy: Optional[HaltPolicy] = None,
+    trend_ok_by_date: Optional[dict[str, bool]] = None,
 ) -> SimResult:
     symbols = [e["symbol"] for e in universe if e["symbol"] in price_data]
     categories = {e["symbol"]: e["category"] for e in universe}
@@ -309,6 +347,7 @@ def simulate(
     rejected: list[RejectedSignal] = []
     equity_curve: list[tuple[str, float]] = []
     halt_flags: list[bool] = []
+    halt_transitions: list[tuple[str, str, str]] = []
     days_in_position: dict[str, int] = {s: 0 for s in symbols}
 
     for d in sim_dates:
@@ -328,9 +367,7 @@ def simulate(
                     continue
                 fill = buy_fill_price(open_price)
                 atr = indicators.get("atr")
-                decision = evaluate_buy(
-                    state, symbol, category, fill, atr, current_prices, max_drawdown_pct
-                )
+                decision = evaluate_buy(state, symbol, category, fill, atr, current_prices)
                 if not decision.approved:
                     rejected.append(RejectedSignal(symbol, d, "BUY", decision.reasons))
                 else:
@@ -388,9 +425,20 @@ def simulate(
             current_prices[symbol] = rows_by_symbol[symbol][idx]["close"]
         for symbol in state.open_positions:
             days_in_position[symbol] = days_in_position.get(symbol, 0) + 1
-        equity = update_peak_equity(state, current_prices)
+        # update_halt_state() peak'i de günceller ve halt durum makinesini
+        # ilerletir; yarınki ALIM'lar bu işaretlemenin bıraktığı duruma bakar.
+        halt_event = update_halt_state(
+            state,
+            current_prices,
+            halt_policy,
+            mark_date=d,
+            trend_ok=None if trend_ok_by_date is None else trend_ok_by_date.get(d, False),
+        )
+        equity = halt_event.equity
         equity_curve.append((d, equity))
-        halt_flags.append(is_drawdown_halted(equity, state.peak_equity, max_drawdown_pct))
+        halt_flags.append(state.halted or state.stopped)
+        if halt_event.transition:
+            halt_transitions.append((d, halt_event.transition, halt_event.detail))
 
         # 3) Compute tomorrow's decisions from today's close (no lookahead:
         #    only rows up to and including index `idx` are ever passed in).
@@ -416,6 +464,10 @@ def simulate(
         window_start=sim_dates[0],
         window_end=sim_dates[-1],
         halt_flags=halt_flags,
+        halt_transitions=halt_transitions,
+        halt_resets=state.halt_resets,
+        stopped=state.stopped,
+        stop_reason=state.stop_reason,
     )
 
 
@@ -574,12 +626,15 @@ def run(years: int, out_dir: Path, synthetic: bool = False) -> dict:
 
     universe = [e for e in BACKTEST_SYMBOLS if e["symbol"] in price_data]
     per_symbol_capital = STARTING_CAPITAL / len(BACKTEST_SYMBOLS)
+    # Halt'ın trend kapısı piyasa geneline bakar: izole koşularda da aynı
+    # endeks kullanılır, tek sembolün kendi trendi değil.
+    trend_flags = market_trend_flags(price_data)
 
     print("\nRunning isolated per-symbol simulations...")
     per_symbol_results = {}
     for entry in universe:
         symbol = entry["symbol"]
-        sim = simulate([entry], price_data, per_symbol_capital)
+        sim = simulate([entry], price_data, per_symbol_capital, trend_ok_by_date=trend_flags)
         bh_curve, bh_start, bh_end = buy_and_hold([entry], price_data, per_symbol_capital)
         total_days = len(sim.equity_curve)
         per_symbol_results[symbol] = {
@@ -595,7 +650,7 @@ def run(years: int, out_dir: Path, synthetic: bool = False) -> dict:
         print(f"  {symbol}: {len(sim.trades)} trades")
 
     print("\nRunning portfolio-wide (shared-cash, risk-engine-constrained) simulation...")
-    portfolio_sim = simulate(universe, price_data, STARTING_CAPITAL)
+    portfolio_sim = simulate(universe, price_data, STARTING_CAPITAL, trend_ok_by_date=trend_flags)
     portfolio_bh_curve, _, _ = buy_and_hold(universe, price_data, STARTING_CAPITAL)
     portfolio_results = {
         "window": {"start": portfolio_sim.window_start, "end": portfolio_sim.window_end},

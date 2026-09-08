@@ -10,17 +10,9 @@ düştüğü için portföy çeşitlendirmeyle kaçamaz.
 Üç kol aynı veri üzerinde koşulur:
   A. Halt kapalı  B. Mandal %20 (production)  C. Histerezis %20→%10
 
-!!! ÖNEMLİ -- BU SCRIPT BU BRANCH'İN KODUYLA KOŞMAZ !!!
-C kolu histerezisli risk motorunu (`engine.risk.HaltPolicy`,
-`update_halt_state`) gerektirir; o mekanizma ölçüldükten sonra geri alındı
-(bkz. backtest/halt_threshold_findings.md). Script, mekanizmanın yaşadığı
-son commit olan 1fc8e31'in bir kopyasına karşı koşar:
+Kollar doğrudan bu repodaki risk motoruna karşı koşar (trend kapılı halt
+production'a alındıktan sonra ayrı bir ağaca gerek kalmadı).
 
-    git archive 1fc8e31 | tar -x -C /tmp/crisis-engine
-    ALSATBOTU_CRISIS_ENGINE_ROOT=/tmp/crisis-engine \
-        python3 backtest/crisis_multi.py cift_dipli 6
-
-Ortam değişkeni verilmezse script, kendi yanındaki `crisis/` dizinini arar.
 Sonuçlar: backtest/results/synthetic/crisis_<sekil>.json
 
 Kullanım: python3 crisis_multi.py <sekil> <tohum_sayisi>
@@ -38,29 +30,19 @@ import json
 import random
 import statistics
 import sys
-from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import os
 
-CRISIS_ROOT = Path(
-    os.environ.get("ALSATBOTU_CRISIS_ENGINE_ROOT", Path(__file__).resolve().parent / "crisis")
-)
-if not (CRISIS_ROOT / "engine" / "risk.py").exists():
-    raise SystemExit(
-        f"Histerezisli risk motoru bulunamadı: {CRISIS_ROOT}\n"
-        "Bu script bu branch'in koduyla koşmaz; 1fc8e31'in bir kopyasını açın:\n"
-        "  git archive 1fc8e31 | tar -x -C /tmp/crisis-engine\n"
-        "  ALSATBOTU_CRISIS_ENGINE_ROOT=/tmp/crisis-engine python3 backtest/crisis_multi.py <sekil> <tohum>"
-    )
-sys.path.insert(0, str(CRISIS_ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backtest.portfolio_backtest import (  # noqa: E402
     BACKTEST_SYMBOLS,
     STARTING_CAPITAL,
     compute_curve_metrics,
     load_price_data,
+    market_trend_flags,
     simulate,
 )
 from engine.risk import HaltPolicy  # noqa: E402
@@ -166,7 +148,7 @@ ARMS = {
     "E_trend_kapisi": HaltPolicy(
         halt_pct=0.20, release_pct=0.10, min_halt_marks=10,
         reset_after_marks=250, reset_fraction=0.5, max_resets=2, hard_floor_pct=0.50,
-    ),
+    ),  # trend bayrakları simulate()'e ayrıca geçilir
     # C ile tek farkı reset penceresi: 60 gün çöküş süresinden kısa kaldığı
     # için mekanizma krizin ortasında geri giriyordu (bkz. reset@COKUS_ICI
     # vakaları). 120 gün bunu kapatıyor mu?
@@ -189,40 +171,6 @@ if _selected:
     ARM_SUFFIX = "_" + "+".join(names)
 else:
     ARM_SUFFIX = ""
-
-
-def market_trend_flags(data: dict[str, list[dict]], window: int = 50) -> dict[str, bool]:
-    """tarih -> eşit ağırlıklı endeks kendi SMA<window>'unun üstünde mi?
-
-    Semboller farklı uzunlukta olabilir (gerçek veride kimi seri daha kısa
-    başlar), o yüzden endeks tarih ekseninde kurulur: her sembol kendi ilk
-    kapanışına normalize edilir ve her gün yalnızca o gün verisi olan
-    semboller ortalamaya girer.
-
-    Look-ahead yok: her gün için yalnızca o güne kadarki (o gün dahil)
-    kapanışlar kullanılır.
-    """
-    by_date: dict[str, list[float]] = {}
-    for rows in data.values():
-        if not rows:
-            continue
-        base = rows[0]["close"]
-        if not base:
-            continue
-        for row in rows:
-            by_date.setdefault(row["timestamp"].date().isoformat(), []).append(row["close"] / base)
-
-    dates = sorted(by_date)
-    index = [sum(v) / len(v) for d in dates for v in (by_date[d],)]
-
-    flags: dict[str, bool] = {}
-    for i, date in enumerate(dates):
-        if i + 1 < window:
-            flags[date] = False
-            continue
-        sma = sum(index[i + 1 - window : i + 1]) / window
-        flags[date] = index[i] > sma
-    return flags
 
 
 # --------------------------------------------------------------------------
@@ -309,9 +257,8 @@ def run_real(years: int, cutoff: str = HISTORY_CUTOFF) -> None:
 
     for name in ("A_halt_kapali", "E_trend_kapisi"):
         policy = ARMS_ALL[name]
-        if name == "E_trend_kapisi":
-            policy = replace(policy, trend_ok_by_date=trend_flags)
-        sim = simulate(universe, data, STARTING_CAPITAL, halt_policy=policy)
+        flags = trend_flags if name == "E_trend_kapisi" else None
+        sim = simulate(universe, data, STARTING_CAPITAL, halt_policy=policy, trend_ok_by_date=flags)
         total, cagr, dd, sharpe = compute_curve_metrics(sim.equity_curve)
         stress = {
             label: window_metrics(sim.equity_curve, a, b)
@@ -364,9 +311,11 @@ def main() -> None:
         row = {"seed": seed, "phases": phases, "bh_total": bh[-1] / bh[0] - 1.0, "bh_dd": bh_dd, "arms": {}}
         trend_flags = market_trend_flags(data)
         for name, policy in ARMS.items():
-            if name == "E_trend_kapisi":
-                policy = replace(policy, trend_ok_by_date=trend_flags)
-            sim = simulate(BACKTEST_SYMBOLS, data, STARTING_CAPITAL, halt_policy=policy)
+            flags = trend_flags if name == "E_trend_kapisi" else None
+            sim = simulate(
+                BACKTEST_SYMBOLS, data, STARTING_CAPITAL,
+                halt_policy=policy, trend_ok_by_date=flags,
+            )
             total, cagr, dd, sharpe = compute_curve_metrics(sim.equity_curve)
             events = [
                 {"date": d, "kind": t, "phase": phase_of(d, phases)}

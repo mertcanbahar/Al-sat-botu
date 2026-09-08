@@ -33,14 +33,14 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from alsatbotu.config import DATA_DIR, WATCHLIST
+from alsatbotu.config import DATA_DIR, MAX_HALT_RESETS, TREND_SMA_WINDOW, WATCHLIST
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Decision, Signal, evaluate
-from engine.risk import evaluate_buy
+from engine.risk import evaluate_buy, update_halt_state
 from notify.telegram import is_configured as telegram_is_configured, send_message
 from portfolio.ledger import last_decisions, log_signal
-from portfolio.state import close_position, load_state, open_position, save_state, update_peak_equity
+from portfolio.state import close_position, load_state, open_position, save_state
 
 SIGNAL_LABELS = {Signal.BUY: "🟢 AL", Signal.SELL: "🔴 SAT"}
 
@@ -136,12 +136,41 @@ def _append_equity(path: Path, equity: float, timestamp: Optional[str] = None) -
         f.write("\n")
 
 
+def _market_trend_ok(history: dict[str, list[dict]], window: int = TREND_SMA_WINDOW) -> Optional[bool]:
+    """Piyasa proxy'si kendi SMA<window>'unun üstünde mi? (halt'ın trend kapısı)
+
+    İzlenen sembollerin eşit ağırlıklı endeksi: her sembol kendi ilk
+    kapanışına normalize edilir, her gün yalnızca o gün verisi olan
+    semboller ortalamaya girer. Backtest'teki
+    `backtest.portfolio_backtest.market_trend_flags` ile aynı formül.
+
+    Yeterli geçmiş yoksa None döner: trend bilinmiyor demektir, halt'ı
+    trend gerekçesiyle açmayız.
+    """
+    by_date: dict[str, list[float]] = {}
+    for rows in history.values():
+        if not rows or not rows[0].get("close"):
+            continue
+        base = rows[0]["close"]
+        for row in rows:
+            if row.get("close") is None:
+                continue
+            by_date.setdefault(row["timestamp"].date().isoformat(), []).append(row["close"] / base)
+
+    dates = sorted(by_date)
+    if len(dates) < window:
+        return None
+    index = [sum(by_date[d]) / len(by_date[d]) for d in dates]
+    return index[-1] > sum(index[-window:]) / window
+
+
 def run(days: int = 60) -> None:
     state = load_state()
     # Read before any new signal is appended, so it reflects the previous run.
     previous_decisions = last_decisions()
     current_prices: dict[str, float] = {}
     latest_by_symbol: dict[str, dict] = {}
+    history_by_symbol: dict[str, list[dict]] = {}
 
     fetch_ok = 0
     volume_ok = 0
@@ -164,6 +193,7 @@ def run(days: int = 60) -> None:
             print(f"{symbol}: not enough candles to evaluate ({len(rows)})")
             continue
 
+        history_by_symbol[symbol] = rows
         decision = evaluate(rows)
         latest = add_indicators(rows)[-1]
         price = latest["close"]
@@ -231,7 +261,20 @@ def run(days: int = 60) -> None:
         else:
             print(f"{symbol}: HOLD @ {price:.4f}")
 
-    equity = update_peak_equity(state, current_prices)
+    # Halt durum makinesini bu koşunun equity işaretlemesiyle ilerlet.
+    # Bir sonraki koşudaki ALIM'lar buradan çıkan duruma bakar (backtest'te
+    # de aynı sıra geçerli: işaretle, sonra ertesi gün işlem yap).
+    trend_ok = _market_trend_ok(history_by_symbol)
+    halt_event = update_halt_state(
+        state,
+        current_prices,
+        mark_date=datetime.now(timezone.utc).isoformat(),
+        trend_ok=trend_ok,
+    )
+    equity = halt_event.equity
+    print(f"Piyasa trendi (SMA{TREND_SMA_WINDOW}): " + {True: "yukarı", False: "aşağı", None: "bilinmiyor (yetersiz geçmiş)"}[trend_ok])
+    if halt_event.transition:
+        print(f"HALT [{halt_event.transition}]: {halt_event.detail}")
     save_state(state)
 
     _write_health(
@@ -249,6 +292,12 @@ def run(days: int = 60) -> None:
     print()
     print(f"Cash: {state.cash:.2f}")
     print(f"Equity: {equity:.2f} (peak {state.peak_equity:.2f})")
+    if state.stopped:
+        print(f"DURUM: bot kalıcı olarak durduruldu ({state.stop_reason}). "
+              "Devam için: python scripts/resume_halt.py --onayla")
+    elif state.halted:
+        print(f"DURUM: drawdown halt aktif ({state.halted_marks} işaretlemedir), "
+              f"yeni ALIM yok. Reset hakkı: {state.halt_resets}/{MAX_HALT_RESETS}")
     print(f"Open positions: {len(state.open_positions)}")
     for symbol, position in state.open_positions.items():
         print(
