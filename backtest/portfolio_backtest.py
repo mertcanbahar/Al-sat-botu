@@ -118,6 +118,7 @@ INDICATOR_LOOKBACK_BARS = 400   # rolling window fed to evaluate(); EMA20/50, RS
                                  # becoming O(n^2) over a 5-year, 20-symbol run. It does not
                                  # affect the no-lookahead guarantee: only past bars are ever used.
 WARMUP_BARS = 60  # >50 so EMA50 has real data, not just its seed value
+MAX_OUTPUTSIZE = 5000  # Twelve Data time_series outputsize üst sınırı
 
 
 # --------------------------------------------------------------------------
@@ -136,20 +137,29 @@ def load_price_data(
     """
     from alsatbotu.data import get_price_history
 
-    calendar_days = 365 * years + 10  # pad for weekends/holidays
+    # `days` Twelve Data'ya outputsize olarak gider ve API'nin üst sınırı
+    # 5000'dir; aşınca istek 400 döner. Takvim günü olarak gönderdiğimiz için
+    # 5000 outputsize ~5000 işlem günü (~19-20 yıl) veri demek.
+    calendar_days = min(365 * years + 10, MAX_OUTPUTSIZE)
+    if 365 * years + 10 > MAX_OUTPUTSIZE:
+        print(
+            f"  not: {years} yıl için {365 * years + 10} istenirdi, API sınırı "
+            f"{MAX_OUTPUTSIZE}; {MAX_OUTPUTSIZE} mum isteniyor (~{MAX_OUTPUTSIZE // 252} yıl)."
+        )
     data: dict[str, list[dict]] = {}
     for i, entry in enumerate(symbols):
         symbol = entry["symbol"]
         try:
             rows = get_price_history(symbol, source="twelvedata", days=calendar_days)
+            if len(rows) < WARMUP_BARS + 20:
+                print(f"  {symbol}: only {len(rows)} candles returned -- excluded (need warmup + room to trade)")
+            else:
+                print(f"  {symbol}: {len(rows)} candles, {rows[0]['timestamp'].date()} -> {rows[-1]['timestamp'].date()}")
+                data[symbol] = rows
         except Exception as exc:  # noqa: BLE001 - one bad symbol shouldn't stop the run
             print(f"  {symbol}: FAILED to fetch ({exc}) -- excluded from results")
-            continue
-        if len(rows) < WARMUP_BARS + 20:
-            print(f"  {symbol}: only {len(rows)} candles returned -- excluded (need warmup + room to trade)")
-            continue
-        print(f"  {symbol}: {len(rows)} candles, {rows[0]['timestamp'].date()} -> {rows[-1]['timestamp'].date()}")
-        data[symbol] = rows
+        # Bekleme her durumda: başarısız sembolde `continue` ile atlanınca
+        # kalan istekler hız limitine takılıp 429 alıyordu.
         if i < len(symbols) - 1:
             time.sleep(sleep_seconds)
     return data
