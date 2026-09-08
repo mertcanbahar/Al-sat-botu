@@ -1,0 +1,186 @@
+{
+  "shape": "kisa_sert",
+  "runs": [
+    {
+      "seed": 11,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.5245778394694338,
+      "bh_dd": -0.39793511597937886,
+      "arms": {
+        "E_trend_kapisi": {
+          "total_return_pct": 0.6441061467300235,
+          "sharpe": 0.963434014124159,
+          "max_drawdown_pct": -0.18445012973943206,
+          "trade_count": 136,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        }
+      }
+    },
+    {
+      "seed": 12,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.42768010408144974,
+      "bh_dd": -0.2640801361611886,
+      "arms": {
+        "E_trend_kapisi": {
+          "total_return_pct": 0.32219113852694914,
+          "sharpe": 0.4794231493052848,
+          "max_drawdown_pct": -0.18175745353683295,
+          "trade_count": 152,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        }
+      }
+    },
+    {
+      "seed": 13,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.2329254112021082,
+      "bh_dd": -0.29089687662978614,
+      "arms": {
+        "E_trend_kapisi": {
+          "total_return_pct": 0.255954284893418,
+          "sharpe": 0.4417959828220132,
+          "max_drawdown_pct": -0.289830971100468,
+          "trade_count": 130,
+          "halt_days": 90,
+          "halt_days_pct": 0.075,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-11-23",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2023-02-14",
+              "kind": "released",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2023-08-10",
+              "kind": "halted",
+              "phase": "COKUS_ICI"
+            },
+            {
+              "date": "2023-09-22",
+              "kind": "released",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 14,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.6503263974187825,
+      "bh_dd": -0.40064420558922115,
+      "arms": {
+        "E_trend_kapisi": {
+          "total_return_pct": 0.48430048738284803,
+          "sharpe": 0.7189463637463464,
+          "max_drawdown_pct": -0.15537172301691518,
+          "trade_count": 189,
+          "halt_days": 0,
+          "halt_days_pct": 0.0,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": []
+        }
+      }
+    },
+    {
+      "seed": 15,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 0.5203226527346039,
+      "bh_dd": -0.23641362548823022,
+      "arms": {
+        "E_trend_kapisi": {
+          "total_return_pct": 0.18667740413679912,
+          "sharpe": 0.3317664367605005,
+          "max_drawdown_pct": -0.24405208538702164,
+          "trade_count": 169,
+          "halt_days": 10,
+          "halt_days_pct": 0.008333333333333333,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2022-05-31",
+              "kind": "halted",
+              "phase": "kriz_oncesi"
+            },
+            {
+              "date": "2022-06-14",
+              "kind": "released",
+              "phase": "kriz_oncesi"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seed": 16,
+      "phases": {
+        "crash_start": "2023-06-05",
+        "crash_end": "2023-08-28",
+        "recovery_end": "2024-08-12"
+      },
+      "bh_total": 1.0083912038567542,
+      "bh_dd": -0.33418495444887286,
+      "arms": {
+        "E_trend_kapisi": {
+          "total_return_pct": 0.8433311794106069,
+          "sharpe": 0.9848488231916832,
+          "max_drawdown_pct": -0.20098570314058606,
+          "trade_count": 153,
+          "halt_days": 10,
+          "halt_days_pct": 0.008333333333333333,
+          "halted_at_end": false,
+          "stopped": false,
+          "events": [
+            {
+              "date": "2023-11-07",
+              "kind": "halted",
+              "phase": "toparlanma"
+            },
+            {
+              "date": "2023-11-21",
+              "kind": "released",
+              "phase": "toparlanma"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
