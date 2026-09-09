@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-08T23:56:39.190056Z",
+  "timestamp": "2026-09-09T23:56:26.808043Z",
   "modules": [
     {
       "name": "twelvedata",
@@ -20,7 +20,7 @@
     {
       "name": "kural",
       "status": "ok",
-      "detail": "3 sinyal"
+      "detail": "4 sinyal"
     },
     {
       "name": "portfoy",
