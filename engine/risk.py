@@ -6,9 +6,12 @@ Rules:
   - The ATR stop uses the same multiplier as the SELL rule in
     `alsatbotu.signal` (entry_price - ATR_STOP_MULTIPLIER * atr), so a
     position's stop is consistent with the rule that would exit it.
+  - No single position may hold more than `MAX_POSITION_ALLOCATION_PCT` of
+    equity (VADE profile; never above `POSITION_ALLOCATION_HARD_CAP` = 15%).
   - No single category (see `alsatbotu.config.SYMBOL_CATEGORIES`) may hold
     more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity.
-  - At most `MAX_OPEN_POSITIONS` (8) positions open at once.
+  - At most `MAX_OPEN_POSITIONS` positions open at once (VADE profile:
+    5 on "uzun", 10 on "kisa").
   - A trade whose sized notional falls below `MIN_POSITION_NOTIONAL` is
     rejected outright rather than opened as a dust-sized position.
   - No new BUYs while the portfolio is drawdown-halted; existing positions
@@ -29,6 +32,7 @@ from alsatbotu.config import (
     MAX_DRAWDOWN_PCT,
     MAX_HALT_RESETS,
     MAX_OPEN_POSITIONS,
+    MAX_POSITION_ALLOCATION_PCT,
     MIN_HALT_MARKS,
     MIN_POSITION_NOTIONAL,
     RISK_PER_TRADE_PCT,
@@ -300,6 +304,11 @@ def evaluate_buy(
         equity * CATEGORY_EXPOSURE_LIMIT_PCT - state.category_exposure(category, current_prices)
     )
     limits = {
+        # Tek pozisyon tavanı: nakdin tek bir isme akıp sonraki sinyallerin
+        # "nakit yok" diye reddedilmesini engeller.
+        f"position {MAX_POSITION_ALLOCATION_PCT * 100:.0f}% allocation cap": (
+            equity * MAX_POSITION_ALLOCATION_PCT / entry_price
+        ),
         "cash": state.cash / entry_price,
         f"category {category!r} {CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f}% limit": (
             max(category_room, 0.0) / entry_price

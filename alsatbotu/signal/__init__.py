@@ -1,6 +1,7 @@
 """Rule engine turning indicator values into a BUY/SELL/HOLD signal.
 
-Uses EMA(20), EMA(50), RSI(14), ATR(14) and a 20-period volume average:
+Uses a fast/slow EMA pair (periods from the VADE profile -- 20/50 on "uzun",
+10/30 on "kisa"), RSI(14), ATR(14) and a 20-period volume average:
 
 AL (BUY)  -- all of: EMA20 > EMA50, RSI in [40, 75], last volume > 20-period
              volume average.
@@ -26,12 +27,19 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Sequence
 
+from ..config import (
+    ATR_STOP_MULTIPLIER as _ATR_STOP_MULTIPLIER,
+    EMA_FAST_PERIOD,
+    EMA_SLOW_PERIOD,
+)
 from ..indicators import add_indicators
 
 RSI_BUY_MIN = 40
 RSI_BUY_MAX = 75
 RSI_SELL_MAX = 75
-ATR_STOP_MULTIPLIER = 2.0
+# Vade profilinden gelir (alsatbotu.config); burada yeniden dışa aktarılıyor
+# çünkü engine.risk ve backtest bu adı import ediyor.
+ATR_STOP_MULTIPLIER = _ATR_STOP_MULTIPLIER
 
 
 class Signal(str, Enum):
@@ -47,8 +55,8 @@ class Decision:
 
 
 def _evaluate_row(prev: dict, last: dict) -> Decision:
-    ema_20 = last["ema_20"]
-    ema_50 = last["ema_50"]
+    ema_20 = last["ema_fast"]
+    ema_50 = last["ema_slow"]
     rsi_value = last["rsi"]
     close = last["close"]
     volume = last.get("volume")
@@ -63,7 +71,7 @@ def _evaluate_row(prev: dict, last: dict) -> Decision:
             sell_reasons.append(f"Price {close:.4f} below ATR stop level {stop_level:.4f}")
 
     if ema_20 is not None and ema_50 is not None and ema_20 < ema_50:
-        sell_reasons.append(f"EMA20 {ema_20:.4f} < EMA50 {ema_50:.4f}")
+        sell_reasons.append(f"EMA{EMA_FAST_PERIOD} {ema_20:.4f} < EMA{EMA_SLOW_PERIOD} {ema_50:.4f}")
 
     if rsi_value is not None and rsi_value > RSI_SELL_MAX:
         sell_reasons.append(f"RSI {rsi_value:.1f} > {RSI_SELL_MAX}")
@@ -79,7 +87,7 @@ def _evaluate_row(prev: dict, last: dict) -> Decision:
         return Decision(
             signal=Signal.BUY,
             reasons=[
-                f"EMA20 {ema_20:.4f} > EMA50 {ema_50:.4f}",
+                f"EMA{EMA_FAST_PERIOD} {ema_20:.4f} > EMA{EMA_SLOW_PERIOD} {ema_50:.4f}",
                 f"RSI {rsi_value:.1f} in [{RSI_BUY_MIN}, {RSI_BUY_MAX}]",
                 f"Volume {volume:.4f} > 20-period average {volume_avg:.4f}",
             ],
