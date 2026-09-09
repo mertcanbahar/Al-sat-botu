@@ -9,6 +9,8 @@ Rules:
   - No single category (see `alsatbotu.config.SYMBOL_CATEGORIES`) may hold
     more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity.
   - At most `MAX_OPEN_POSITIONS` (8) positions open at once.
+  - A trade whose sized notional falls below `MIN_POSITION_NOTIONAL` is
+    rejected outright rather than opened as a dust-sized position.
   - No new BUYs while the portfolio is drawdown-halted; existing positions
     may still be sold. The halt is a latching state with hysteresis, not an
     instantaneous test -- see `HaltPolicy` and `update_halt_state()` below.
@@ -28,6 +30,7 @@ from alsatbotu.config import (
     MAX_HALT_RESETS,
     MAX_OPEN_POSITIONS,
     MIN_HALT_MARKS,
+    MIN_POSITION_NOTIONAL,
     RISK_PER_TRADE_PCT,
 )
 from alsatbotu.signal import ATR_STOP_MULTIPLIER
@@ -309,10 +312,18 @@ def evaluate_buy(
             quantity = max_quantity
             capped_by = label
 
-    if quantity <= 0:
+    # Sıfır değil, "anlamsız küçük" de kabul edilmez: nakit tükendiğinde
+    # cash/entry_price pozitif ama toz mertebesinde bir sayı olur ve eski
+    # `quantity <= 0` kontrolünden geçip 0.000000 adetlik kayıt yaratırdı.
+    notional = quantity * entry_price
+    if quantity <= 0 or notional < MIN_POSITION_NOTIONAL:
+        exhausted = capped_by or "position sizing"
         return RiskDecision(
             approved=False,
-            reasons=[f"No room to open a position: {capped_by} is exhausted"],
+            reasons=[
+                f"No room to open a position: {exhausted} leaves only "
+                f"{notional:.2f} of notional (minimum {MIN_POSITION_NOTIONAL:.2f})"
+            ],
             stop_price=stop_price,
         )
 

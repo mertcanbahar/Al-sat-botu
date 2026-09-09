@@ -257,3 +257,40 @@ def test_daily_report_halt_line_covers_all_three_states():
     update_halt_state(stopped, {})
     line = halt_status_line(stopped, 40_000.0)
     assert "KALICI DURDURMA" in line and "insan onayı" in line
+
+
+# -- Toz pozisyon koruması --------------------------------------------------
+
+
+def test_dust_sized_buy_is_rejected_instead_of_opened():
+    """Nakit tükendiğinde cash/entry_price pozitif ama toz mertebesinde çıkar.
+
+    Eski `quantity <= 0` kontrolü bunu geçiriyor ve günlük raporda 0.000000
+    adetlik pozisyon olarak görünüyordu.
+    """
+    state = PortfolioState(cash=1e-7, starting_capital=10_000.0, peak_equity=10_000.0)
+    decision = evaluate_buy(state, "META", "tech", 500.0, 10.0, {})
+
+    assert not decision.approved
+    assert decision.quantity == 0.0
+    assert any("minimum" in r for r in decision.reasons)
+
+
+def test_buy_below_minimum_notional_is_rejected():
+    from alsatbotu.config import MIN_POSITION_NOTIONAL
+
+    # Kategori odası (equity * %40) minimum notional'ın altında kalacak kadar
+    # küçük bir hesap: 20 TL equity -> 8 TL oda -> 10 TL eşiğinin altında.
+    equity = MIN_POSITION_NOTIONAL * 2
+    state = PortfolioState(cash=equity, starting_capital=equity, peak_equity=equity)
+    decision = evaluate_buy(state, "META", "tech", 500.0, 10.0, {})
+
+    assert not decision.approved
+    assert any("minimum" in r for r in decision.reasons)
+
+
+def test_normal_sized_buy_still_goes_through():
+    state = PortfolioState(cash=10_000.0, starting_capital=10_000.0, peak_equity=10_000.0)
+    decision = evaluate_buy(state, "META", "tech", 500.0, 10.0, {})
+    assert decision.approved
+    assert decision.quantity * 500.0 >= 10.0

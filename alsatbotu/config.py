@@ -28,6 +28,11 @@ SIGNALS_LEDGER_PATH = DATA_DIR / "signals.jsonl"
 STARTING_CAPITAL = float(os.environ.get("ALSATBOTU_STARTING_CAPITAL", "10000"))
 
 RISK_PER_TRADE_PCT = 0.02
+# Anlamsız küçüklükteki pozisyonlar hiç açılmasın. Nakit tükendiğinde
+# cash/entry_price sıfır değil, ~1e-9 gibi pozitif bir float çıkıyor; eski
+# "quantity <= 0" kontrolü bunu geçiriyor ve raporda 0.000000 adetlik
+# pozisyon olarak görünüyordu.
+MIN_POSITION_NOTIONAL = float(os.environ.get("ALSATBOTU_MIN_POSITION_NOTIONAL", "10"))
 CATEGORY_EXPOSURE_LIMIT_PCT = 0.40
 MAX_OPEN_POSITIONS = 8
 # -- Drawdown halt (histerezisli) ---------------------------------------
