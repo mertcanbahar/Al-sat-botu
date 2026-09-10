@@ -343,3 +343,81 @@ def test_allocation_cap_never_exceeds_the_hard_cap(monkeypatch=None):
     from alsatbotu.config import MAX_POSITION_ALLOCATION_PCT, POSITION_ALLOCATION_HARD_CAP
 
     assert MAX_POSITION_ALLOCATION_PCT <= POSITION_ALLOCATION_HARD_CAP
+
+
+# -- VADE profili -----------------------------------------------------------
+
+
+# İlgili config değerlerinin anlık kopyası. Modülün kendisini döndürmek
+# işe yaramaz: yardımcı, ortamı eski haline getirmek için config'i tekrar
+# yüklüyor ve modül nesnesi tek olduğu için çağıran taraf geri yüklenmiş
+# değerleri okuyordu.
+_VADE_FIELDS = (
+    "VADE", "EMA_FAST_PERIOD", "EMA_SLOW_PERIOD", "ATR_STOP_MULTIPLIER",
+    "MAX_OPEN_POSITIONS", "MAX_POSITION_ALLOCATION_PCT",
+)
+
+
+def _reload_config_with(vade_value):
+    """ALSATBOTU_VADE verilen değerdeyken config'i yükleyip değerlerini döndürür."""
+    import importlib
+    import os
+    from types import SimpleNamespace
+
+    import alsatbotu.config as config
+
+    previous = os.environ.get("ALSATBOTU_VADE")
+    try:
+        if vade_value is None:
+            os.environ.pop("ALSATBOTU_VADE", None)
+        else:
+            os.environ["ALSATBOTU_VADE"] = vade_value
+        reloaded = importlib.reload(config)
+        return SimpleNamespace(**{f: getattr(reloaded, f) for f in _VADE_FIELDS})
+    finally:
+        if previous is None:
+            os.environ.pop("ALSATBOTU_VADE", None)
+        else:
+            os.environ["ALSATBOTU_VADE"] = previous
+        importlib.reload(config)
+
+
+def test_vade_defaults_to_uzun_when_unset():
+    config = _reload_config_with(None)
+    assert config.VADE == "uzun"
+    assert (config.EMA_FAST_PERIOD, config.EMA_SLOW_PERIOD) == (20, 50)
+    assert config.MAX_OPEN_POSITIONS == 5
+
+
+def test_vade_profiles_carry_the_documented_values():
+    kisa = _reload_config_with("kisa")
+    assert (kisa.EMA_FAST_PERIOD, kisa.EMA_SLOW_PERIOD) == (10, 30)
+    assert kisa.ATR_STOP_MULTIPLIER == 1.5
+    assert kisa.MAX_OPEN_POSITIONS == 10
+    assert kisa.MAX_POSITION_ALLOCATION_PCT == 0.08
+
+    uzun = _reload_config_with("uzun")
+    assert (uzun.EMA_FAST_PERIOD, uzun.EMA_SLOW_PERIOD) == (20, 50)
+    assert uzun.ATR_STOP_MULTIPLIER == 3.0
+    assert uzun.MAX_OPEN_POSITIONS == 5
+    assert uzun.MAX_POSITION_ALLOCATION_PCT == 0.15
+
+
+def test_blank_vade_is_treated_as_unset():
+    """Tanımlanmamış bir GitHub Actions repository variable boş string gelir.
+
+    Bunu geçersiz sayıp hata fırlatmak, değişkeni unutan bir koşuda botu
+    çökertirdi; boş/boşluklu değer varsayılana düşer.
+    """
+    for blank in ("", "   "):
+        config = _reload_config_with(blank)
+        assert config.VADE == "uzun"
+
+
+def test_vade_is_case_and_space_insensitive():
+    assert _reload_config_with(" KISA ").VADE == "kisa"
+
+
+def test_invalid_vade_fails_loudly():
+    with pytest.raises(ValueError, match="ALSATBOTU_VADE"):
+        _reload_config_with("orta")

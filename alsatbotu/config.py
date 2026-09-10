@@ -44,7 +44,10 @@ STARTING_CAPITAL = SERMAYE  # eski ad, kod tabanının geri kalanı bunu kullan�
 #
 # Tahsis oranları toplamda yatırımlı kalma seviyesini de belirler:
 # 10 x %8 = %80, 5 x %15 = %75. İkisi de nakit tamponu bırakır.
-VADE = os.environ.get("ALSATBOTU_VADE", "uzun").strip().lower()
+# Boş değer "tanımsız" demektir: GitHub Actions'ta tanımlanmamış bir
+# repository variable ifadesi boş string olarak gelir ve bunu geçersiz sayıp
+# hata fırlatmak, değişkeni unutan bir koşuda botu çökertirdi.
+VADE = (os.environ.get("ALSATBOTU_VADE") or "").strip().lower() or "uzun"
 
 VADE_PROFILLERI: dict[str, dict] = {
     "kisa": {

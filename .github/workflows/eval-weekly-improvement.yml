@@ -18,6 +18,7 @@ jobs:
   weekly-improvement:
     runs-on: ubuntu-latest
     env:
+      ALSATBOTU_VADE: ${{ vars.ALSATBOTU_VADE || 'uzun' }}
       TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
       TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
