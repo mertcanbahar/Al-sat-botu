@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-08T09:47:12.469478Z",
+  "generated_at": "2026-09-10T18:02:04.337280Z",
   "synthetic": false,
   "years_requested": 20,
   "symbols": [
@@ -33,14 +33,14 @@
   "arms": {
     "A_halt_kapali": {
       "window": {
-        "start": "2007-01-18",
-        "end": "2026-09-04"
+        "start": "2007-01-23",
+        "end": "2026-09-10"
       },
-      "total_return_pct": 5.372543566656685,
-      "cagr_pct": 0.09895157100138152,
-      "max_drawdown_pct": -0.42125260066729187,
-      "sharpe": 0.6523526617833425,
-      "trade_count": 917,
+      "total_return_pct": 2.564716708977921,
+      "cagr_pct": 0.06689318236279584,
+      "max_drawdown_pct": -0.32276451059225597,
+      "sharpe": 0.601302684169019,
+      "trade_count": 663,
       "halt_days": 0,
       "halt_days_pct": 0.0,
       "halted_at_end": false,
@@ -51,143 +51,93 @@
           "start": "2007-10-01",
           "end": "2009-06-30",
           "days": 441,
-          "total_return_pct": -0.25323223905465186,
-          "max_drawdown_pct": -0.42125260066729187
+          "total_return_pct": -0.1746767058074774,
+          "max_drawdown_pct": -0.32276451059225597
         },
         "2011_euro": {
           "start": "2011-05-02",
           "end": "2011-12-30",
           "days": 170,
-          "total_return_pct": -0.18074849087732925,
-          "max_drawdown_pct": -0.24633822981411357
+          "total_return_pct": -0.12620550904390238,
+          "max_drawdown_pct": -0.1657708188755088
         },
         "2018_Q4": {
           "start": "2018-09-04",
           "end": "2018-12-31",
           "days": 82,
-          "total_return_pct": -0.12668779227682936,
-          "max_drawdown_pct": -0.1574697598870479
+          "total_return_pct": -0.08412455826538545,
+          "max_drawdown_pct": -0.1124047087508974
         },
         "2020_covid": {
           "start": "2020-02-03",
           "end": "2020-06-30",
           "days": 104,
-          "total_return_pct": -0.08344103072837528,
-          "max_drawdown_pct": -0.20156557314773604
+          "total_return_pct": -0.09726641294523175,
+          "max_drawdown_pct": -0.21239962809740837
         },
         "2022_ayi": {
           "start": "2022-01-03",
           "end": "2022-12-30",
           "days": 251,
-          "total_return_pct": -0.12986683359192464,
-          "max_drawdown_pct": -0.1948292450535645
+          "total_return_pct": -0.16338915778270535,
+          "max_drawdown_pct": -0.1976406806329199
         }
       }
     },
     "E_trend_kapisi": {
       "window": {
-        "start": "2007-01-18",
-        "end": "2026-09-04"
+        "start": "2007-01-23",
+        "end": "2026-09-10"
       },
-      "total_return_pct": 6.532189793706343,
-      "cagr_pct": 0.1083523525589869,
-      "max_drawdown_pct": -0.40680299163600464,
-      "sharpe": 0.7071383216917309,
-      "trade_count": 897,
-      "halt_days": 144,
-      "halt_days_pct": 0.029149797570850202,
+      "total_return_pct": 2.5116020812723763,
+      "cagr_pct": 0.06607759429893556,
+      "max_drawdown_pct": -0.31217762705717966,
+      "sharpe": 0.5987636871879993,
+      "trade_count": 657,
+      "halt_days": 134,
+      "halt_days_pct": 0.027125506072874495,
       "halted_at_end": false,
       "stopped": false,
       "events": [
         {
-          "date": "2008-03-10",
+          "date": "2008-09-17",
           "kind": "halted",
-          "detail": "Drawdown %20.34 >= %20; yeni ALIM durduruldu."
+          "detail": "Drawdown %20.53 >= %20; yeni ALIM durduruldu."
         },
         {
-          "date": "2008-03-25",
+          "date": "2008-12-16",
           "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 132718.22 -> 122157.14 \u00e7ekildi ile halt kalkt\u0131."
-        },
-        {
-          "date": "2008-07-17",
-          "kind": "halted",
-          "detail": "Drawdown %20.03 >= %20; yeni ALIM durduruldu."
-        },
-        {
-          "date": "2008-08-11",
-          "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 122157.14 -> 110200.25 \u00e7ekildi ile halt kalkt\u0131."
-        },
-        {
-          "date": "2008-12-19",
-          "kind": "halted",
-          "detail": "Drawdown %20.05 >= %20; yeni ALIM durduruldu."
-        },
-        {
-          "date": "2009-01-06",
-          "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 110200.25 -> 98937.75 \u00e7ekildi ile halt kalkt\u0131."
-        },
-        {
-          "date": "2009-03-03",
-          "kind": "halted",
-          "detail": "Drawdown %20.06 >= %20; yeni ALIM durduruldu."
-        },
-        {
-          "date": "2009-03-17",
-          "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 98937.75 -> 90442.02 \u00e7ekildi ile halt kalkt\u0131."
-        },
-        {
-          "date": "2011-11-01",
-          "kind": "halted",
-          "detail": "Drawdown %21.27 >= %20; yeni ALIM durduruldu."
-        },
-        {
-          "date": "2011-11-15",
-          "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 140688.83 -> 125466.07 \u00e7ekildi ile halt kalkt\u0131."
-        },
-        {
-          "date": "2018-12-19",
-          "kind": "halted",
-          "detail": "Drawdown %20.69 >= %20; yeni ALIM durduruldu."
-        },
-        {
-          "date": "2019-01-16",
-          "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 364128.97 -> 315076.32 \u00e7ekildi ile halt kalkt\u0131."
+          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 118124.59 -> 100108.01 \u00e7ekildi ile halt kalkt\u0131."
         },
         {
           "date": "2020-03-12",
           "kind": "halted",
-          "detail": "Drawdown %20.16 >= %20; yeni ALIM durduruldu."
+          "detail": "Drawdown %21.24 >= %20; yeni ALIM durduruldu."
         },
         {
           "date": "2020-04-09",
           "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 400751.74 -> 360185.71 \u00e7ekildi ile halt kalkt\u0131."
+          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 282231.62 -> 249858.38 \u00e7ekildi ile halt kalkt\u0131."
         },
         {
-          "date": "2022-07-06",
+          "date": "2022-09-30",
           "kind": "halted",
-          "detail": "Drawdown %20.48 >= %20; yeni ALIM durduruldu."
+          "detail": "Drawdown %20.05 >= %20; yeni ALIM durduruldu."
         },
         {
-          "date": "2022-07-20",
+          "date": "2022-11-11",
           "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 603530.97 -> 534296.43 \u00e7ekildi ile halt kalkt\u0131."
+          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 347755.96 -> 308818.30 \u00e7ekildi ile halt kalkt\u0131."
         },
         {
-          "date": "2025-03-12",
+          "date": "2025-04-07",
           "kind": "halted",
-          "detail": "Drawdown %20.17 >= %20; yeni ALIM durduruldu."
+          "detail": "Drawdown %20.43 >= %20; yeni ALIM durduruldu."
         },
         {
           "date": "2025-05-07",
           "kind": "released",
-          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 753196.42 -> 652232.19 \u00e7ekildi ile halt kalkt\u0131."
+          "detail": "Piyasa trendi yukar\u0131 d\u00f6nd\u00fc (trend kap\u0131s\u0131); peak 351566.99 -> 317692.32 \u00e7ekildi ile halt kalkt\u0131."
         }
       ],
       "stress_windows": {
@@ -195,36 +145,36 @@
           "start": "2007-10-01",
           "end": "2009-06-30",
           "days": 441,
-          "total_return_pct": -0.2366606592835242,
-          "max_drawdown_pct": -0.40680299163600464
+          "total_return_pct": -0.1617296771855029,
+          "max_drawdown_pct": -0.31217762705717966
         },
         "2011_euro": {
           "start": "2011-05-02",
           "end": "2011-12-30",
           "days": 170,
-          "total_return_pct": -0.18003279828136431,
-          "max_drawdown_pct": -0.24567275842951602
+          "total_return_pct": -0.12620550904390204,
+          "max_drawdown_pct": -0.16577081887550868
         },
         "2018_Q4": {
           "start": "2018-09-04",
           "end": "2018-12-31",
           "days": 82,
-          "total_return_pct": -0.12668806745375571,
-          "max_drawdown_pct": -0.15747051158172007
+          "total_return_pct": -0.08412455826538545,
+          "max_drawdown_pct": -0.1124047087508975
         },
         "2020_covid": {
           "start": "2020-02-03",
           "end": "2020-06-30",
           "days": 104,
-          "total_return_pct": -0.0905790992363057,
-          "max_drawdown_pct": -0.2015681246104881
+          "total_return_pct": -0.10433536516265118,
+          "max_drawdown_pct": -0.21239962809740845
         },
         "2022_ayi": {
           "start": "2022-01-03",
           "end": "2022-12-30",
           "days": 251,
-          "total_return_pct": -0.1409583001017991,
-          "max_drawdown_pct": -0.19635266321716116
+          "total_return_pct": -0.19967322691320766,
+          "max_drawdown_pct": -0.20639119271132628
         }
       }
     }
