@@ -25,11 +25,81 @@ DATA_DIR = Path(os.environ.get("ALSATBOTU_DATA_DIR", Path(__file__).resolve().pa
 PORTFOLIO_STATE_PATH = DATA_DIR / "portfolio.json"
 SIGNALS_LEDGER_PATH = DATA_DIR / "signals.jsonl"
 
-STARTING_CAPITAL = float(os.environ.get("ALSATBOTU_STARTING_CAPITAL", "10000"))
+# -- Sermaye ve vade ----------------------------------------------------
+# SERMAYE: paper portföyün başlangıç sermayesi. Bir state dosyası varsa o
+# dosya kaynaktır; bu değer yalnızca portföy ilk kez yaratılırken kullanılır.
+SERMAYE = float(
+    os.environ.get("ALSATBOTU_SERMAYE", os.environ.get("ALSATBOTU_STARTING_CAPITAL", "10000"))
+)
+STARTING_CAPITAL = SERMAYE  # eski ad, kod tabanının geri kalanı bunu kullanıyor
+
+# VADE: "kisa" ya da "uzun". Tek bir anahtar, birbirine bağlı dört ayarı
+# birlikte değiştirir -- ayrı ayrı kurcalanınca tutarsız kombinasyonlar
+# çıkıyordu (ör. uzun EMA + sıkı stop = trend daha başlamadan stop olmak).
+#
+#   kisa: hızlı dönen sinyal, gürültüye yakın stop, çok sayıda küçük pozisyon.
+#         EMA 10/30 (~2 hafta / ~6 hafta), ATR stop x1.5, 10 pozisyon, %8 tahsis.
+#   uzun: mevcut canlı davranışın devamı. EMA 20/50 (~1 ay / ~2.5 ay), stop
+#         normal dalgalanmayı yutacak kadar geniş (ATR x3), 5 pozisyon, %15.
+#
+# Tahsis oranları toplamda yatırımlı kalma seviyesini de belirler:
+# 10 x %8 = %80, 5 x %15 = %75. İkisi de nakit tamponu bırakır.
+VADE = os.environ.get("ALSATBOTU_VADE", "uzun").strip().lower()
+
+VADE_PROFILLERI: dict[str, dict] = {
+    "kisa": {
+        "ema_fast": 10,
+        "ema_slow": 30,
+        "atr_stop_multiplier": 1.5,
+        "max_open_positions": 10,
+        "max_position_allocation_pct": 0.08,
+    },
+    "uzun": {
+        "ema_fast": 20,
+        "ema_slow": 50,
+        "atr_stop_multiplier": 3.0,
+        "max_open_positions": 5,
+        "max_position_allocation_pct": 0.15,
+    },
+}
+
+if VADE not in VADE_PROFILLERI:
+    raise ValueError(
+        f"ALSATBOTU_VADE={VADE!r} geçersiz; geçerli değerler: {sorted(VADE_PROFILLERI)}"
+    )
+
+_VADE_PROFILI = VADE_PROFILLERI[VADE]
+
+# Tek bir pozisyonun equity'nin bu oranından fazlasını tutmasına asla izin
+# verilmez. Vade profili bunun altında bir değer önerebilir ama üstüne
+# çıkamaz: nakdin tek bir isme akıp sonraki sinyallerin "nakit yok" diye
+# reddedilmesi tam olarak bu tavanın engellediği şey.
+POSITION_ALLOCATION_HARD_CAP = 0.15
 
 RISK_PER_TRADE_PCT = 0.02
+MAX_POSITION_ALLOCATION_PCT = min(
+    float(
+        os.environ.get(
+            "ALSATBOTU_MAX_POSITION_ALLOCATION_PCT",
+            _VADE_PROFILI["max_position_allocation_pct"],
+        )
+    ),
+    POSITION_ALLOCATION_HARD_CAP,
+)
+EMA_FAST_PERIOD = int(os.environ.get("ALSATBOTU_EMA_FAST", _VADE_PROFILI["ema_fast"]))
+EMA_SLOW_PERIOD = int(os.environ.get("ALSATBOTU_EMA_SLOW", _VADE_PROFILI["ema_slow"]))
+ATR_STOP_MULTIPLIER = float(
+    os.environ.get("ALSATBOTU_ATR_STOP_MULTIPLIER", _VADE_PROFILI["atr_stop_multiplier"])
+)
+# Anlamsız küçüklükteki pozisyonlar hiç açılmasın. Nakit tükendiğinde
+# cash/entry_price sıfır değil, ~1e-9 gibi pozitif bir float çıkıyor; eski
+# "quantity <= 0" kontrolü bunu geçiriyor ve raporda 0.000000 adetlik
+# pozisyon olarak görünüyordu.
+MIN_POSITION_NOTIONAL = float(os.environ.get("ALSATBOTU_MIN_POSITION_NOTIONAL", "10"))
 CATEGORY_EXPOSURE_LIMIT_PCT = 0.40
-MAX_OPEN_POSITIONS = 8
+MAX_OPEN_POSITIONS = int(
+    os.environ.get("ALSATBOTU_MAX_OPEN_POSITIONS", _VADE_PROFILI["max_open_positions"])
+)
 # -- Drawdown halt (histerezisli) ---------------------------------------
 # Equity peak'inden MAX_DRAWDOWN_PCT kadar düşülünce yeni ALIM durur (mevcut
 # pozisyonlar satılmaya devam eder). Halt anlık bir hesap değil, kalıcı bir

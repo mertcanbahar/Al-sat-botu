@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
+from alsatbotu.config import EMA_FAST_PERIOD, EMA_SLOW_PERIOD
+
 
 def sma(values: Sequence[float], window: int) -> list[Optional[float]]:
     """Simple moving average; None until `window` values are available."""
@@ -99,6 +101,12 @@ def add_indicators(rows: Sequence[dict], price_key: str = "close") -> list[dict]
 
     ema_20 = ema(closes, 20)
     ema_50 = ema(closes, 50)
+    # Vade profiline göre değişen çift. VADE="uzun" iken 20/50 olduğu için
+    # ema_fast/ema_slow ile ema_20/ema_50 aynı seriyi taşır; VADE="kisa" iken
+    # ayrışırlar. Eski anahtarlar (rapor, dashboard, defter) hep 20/50 kalır ki
+    # adı ile içeriği tutsun.
+    ema_fast = ema_20 if EMA_FAST_PERIOD == 20 else ema(closes, EMA_FAST_PERIOD)
+    ema_slow = ema_50 if EMA_SLOW_PERIOD == 50 else ema(closes, EMA_SLOW_PERIOD)
     rsi_14 = rsi(closes, 14)
     atr_14 = atr(highs, lows, closes, 14)
 
@@ -110,6 +118,8 @@ def add_indicators(rows: Sequence[dict], price_key: str = "close") -> list[dict]
         enriched = dict(row)
         enriched["ema_20"] = ema_20[i]
         enriched["ema_50"] = ema_50[i]
+        enriched["ema_fast"] = ema_fast[i]
+        enriched["ema_slow"] = ema_slow[i]
         enriched["rsi"] = rsi_14[i]
         enriched["atr"] = atr_14[i]
         enriched["volume_sma_20"] = volume_sma_20[i]

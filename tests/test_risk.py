@@ -10,7 +10,7 @@ from engine.risk import (
     evaluate_buy,
     update_halt_state,
 )
-from portfolio.state import PortfolioState, Position
+from portfolio.state import PortfolioState, Position, open_position
 
 POLICY = HaltPolicy(
     halt_pct=0.20,
@@ -234,3 +234,112 @@ def test_latching_policy_never_releases():
     for _ in range(100):
         update_halt_state(state, {}, latching)
     assert state.halted is True
+
+
+# -- Günlük raporun halt satırı (canlı izleme) ------------------------------
+
+
+def test_daily_report_halt_line_covers_all_three_states():
+    """Halt durumu raporda her gün görünmeli, yalnızca sorun varken değil."""
+    from scripts.daily_report import halt_status_line
+
+    calm = PortfolioState(cash=95_000.0, starting_capital=100_000.0, peak_equity=100_000.0)
+    line = halt_status_line(calm, 95_000.0)
+    assert "yok" in line and "%5.00" in line  # drawdown ve eşiğe kalan mesafe görünür
+
+    halted = PortfolioState(cash=80_000.0, starting_capital=100_000.0, peak_equity=100_000.0)
+    for _ in range(3):
+        update_halt_state(halted, {})
+    line = halt_status_line(halted, 80_000.0)
+    assert "AKTİF" in line and "trend" in line  # çıkış koşulu yazılı
+
+    stopped = PortfolioState(cash=40_000.0, starting_capital=100_000.0, peak_equity=100_000.0)
+    update_halt_state(stopped, {})
+    line = halt_status_line(stopped, 40_000.0)
+    assert "KALICI DURDURMA" in line and "insan onayı" in line
+
+
+# -- Toz pozisyon koruması --------------------------------------------------
+
+
+def test_dust_sized_buy_is_rejected_instead_of_opened():
+    """Nakit tükendiğinde cash/entry_price pozitif ama toz mertebesinde çıkar.
+
+    Eski `quantity <= 0` kontrolü bunu geçiriyor ve günlük raporda 0.000000
+    adetlik pozisyon olarak görünüyordu.
+    """
+    state = PortfolioState(cash=1e-7, starting_capital=10_000.0, peak_equity=10_000.0)
+    decision = evaluate_buy(state, "META", "tech", 500.0, 10.0, {})
+
+    assert not decision.approved
+    assert decision.quantity == 0.0
+    assert any("minimum" in r for r in decision.reasons)
+
+
+def test_buy_below_minimum_notional_is_rejected():
+    from alsatbotu.config import MIN_POSITION_NOTIONAL
+
+    # Kategori odası (equity * %40) minimum notional'ın altında kalacak kadar
+    # küçük bir hesap: 20 TL equity -> 8 TL oda -> 10 TL eşiğinin altında.
+    equity = MIN_POSITION_NOTIONAL * 2
+    state = PortfolioState(cash=equity, starting_capital=equity, peak_equity=equity)
+    decision = evaluate_buy(state, "META", "tech", 500.0, 10.0, {})
+
+    assert not decision.approved
+    assert any("minimum" in r for r in decision.reasons)
+
+
+def test_normal_sized_buy_still_goes_through():
+    state = PortfolioState(cash=10_000.0, starting_capital=10_000.0, peak_equity=10_000.0)
+    decision = evaluate_buy(state, "META", "tech", 500.0, 10.0, {})
+    assert decision.approved
+    assert decision.quantity * 500.0 >= 10.0
+
+
+# -- Pozisyon başına tahsis tavanı ------------------------------------------
+
+
+def test_single_position_never_exceeds_the_allocation_cap():
+    from alsatbotu.config import MAX_POSITION_ALLOCATION_PCT
+
+    equity = 10_000.0
+    state = PortfolioState(cash=equity, starting_capital=equity, peak_equity=equity)
+    # Stop çok yakın olduğu için 2%-risk boyutlaması tek başına çok büyük bir
+    # pozisyon isterdi; tavanın bunu kırpması gerekir.
+    decision = evaluate_buy(state, "AAPL", "tech", 100.0, 0.2, {})
+
+    assert decision.approved
+    assert decision.quantity * 100.0 == pytest.approx(equity * MAX_POSITION_ALLOCATION_PCT)
+    assert "allocation cap" in (decision.capped_by or "")
+
+
+def test_allocation_cap_leaves_cash_for_later_signals():
+    """Eski davranışta tek pozisyon nakdi bitirip sonraki sinyalleri reddettiriyordu."""
+    from alsatbotu.config import MAX_POSITION_ALLOCATION_PCT
+
+    equity = 10_000.0
+    state = PortfolioState(cash=equity, starting_capital=equity, peak_equity=equity)
+    prices: dict[str, float] = {}
+
+    opened = 0
+    for symbol, price in [("AAPL", 100.0), ("MSFT", 200.0), ("JPM", 50.0)]:
+        category = "tech" if symbol in ("AAPL", "MSFT") else "financials"
+        decision = evaluate_buy(state, symbol, category, price, price * 0.02, prices)
+        assert decision.approved, decision.reasons
+        open_position(
+            state, symbol=symbol, category=category, quantity=decision.quantity,
+            entry_price=price, entry_date="2026-01-01", stop_price=decision.stop_price,
+        )
+        prices[symbol] = price
+        opened += 1
+
+    assert opened == 3
+    # Üç pozisyon sonrası hâlâ nakit var: 1 - 3 * tahsis oranı kadar.
+    assert state.cash == pytest.approx(equity * (1 - 3 * MAX_POSITION_ALLOCATION_PCT))
+    assert state.cash > 0
+
+
+def test_allocation_cap_never_exceeds_the_hard_cap(monkeypatch=None):
+    from alsatbotu.config import MAX_POSITION_ALLOCATION_PCT, POSITION_ALLOCATION_HARD_CAP
+
+    assert MAX_POSITION_ALLOCATION_PCT <= POSITION_ALLOCATION_HARD_CAP

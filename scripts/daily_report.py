@@ -69,6 +69,37 @@ def _hit_rate(state: PortfolioState) -> Optional[float]:
     return wins / len(state.closed_trades)
 
 
+def halt_status_line(state: PortfolioState, equity: float) -> str:
+    """Halt durumunun her gün görünen tek satırlık özeti.
+
+    Uyarı bölümü yalnızca sorun varken konuşur; bu satır halt kapalıyken de
+    yazılır, çünkü mekanizmayı canlıda izlerken "bugün ne durumdaydı"
+    sorusunun cevabı raporda olmalı.
+    """
+    if state.stopped:
+        return (
+            f"Halt: 🛑 KALICI DURDURMA ({state.stop_reason}) — yeni ALIM yok, "
+            "insan onayı bekleniyor"
+        )
+
+    drawdown = (state.peak_equity - equity) / state.peak_equity if state.peak_equity > 0 else 0.0
+    resets = f"reset {state.halt_resets}/{MAX_HALT_RESETS}"
+    if state.halted:
+        release_equity = state.peak_equity * (1 - DRAWDOWN_RELEASE_PCT)
+        since = f", {state.halted_marks} koşudur" if state.halted_marks else ""
+        return (
+            f"Halt: 🔴 AKTİF{since} — yeni ALIM yok. Çıkış: piyasa trendi yukarı dönerse "
+            f"ya da equity {release_equity:,.2f} üstüne çıkarsa ({resets})"
+        )
+
+    headroom = state.peak_equity * (1 - MAX_DRAWDOWN_PCT)
+    return (
+        f"Halt: 🟢 yok — drawdown %{drawdown * 100:.2f}, "
+        f"tetiklenme eşiği %{MAX_DRAWDOWN_PCT * 100:.0f} (equity {headroom:,.2f} altına inerse) "
+        f"({resets})"
+    )
+
+
 def _warnings(state: PortfolioState, current_prices: dict[str, float], equity: float) -> list[str]:
     warnings: list[str] = []
 
@@ -188,6 +219,7 @@ def build_report(
         [
             "",
             f"Drawdown: %{drawdown * 100:.2f} (tepe {state.peak_equity:,.2f})",
+            halt_status_line(state, equity),
             f"İsabet oranı: {hit_rate_text}",
             "",
             "⚠️ Uyarılar:",
