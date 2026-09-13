@@ -355,6 +355,7 @@ def test_allocation_cap_never_exceeds_the_hard_cap(monkeypatch=None):
 _VADE_FIELDS = (
     "VADE", "EMA_FAST_PERIOD", "EMA_SLOW_PERIOD", "ATR_STOP_MULTIPLIER",
     "MAX_OPEN_POSITIONS", "MAX_POSITION_ALLOCATION_PCT",
+    "PAPER_ATR_STOP_MULTIPLIER", "PAPER_ATR_TARGET_MULTIPLIER",
 )
 
 
@@ -421,3 +422,208 @@ def test_vade_is_case_and_space_insensitive():
 def test_invalid_vade_fails_loudly():
     with pytest.raises(ValueError, match="ALSATBOTU_VADE"):
         _reload_config_with("orta")
+
+
+def test_both_engines_share_one_stop_multiplier():
+    """Değerlendirme motoru ile JSON portföyü aynı stop çarpanını kullanmalı.
+
+    Eskiden PAPER_ATR_STOP_MULTIPLIER sabit 1.5'ti; vade "uzun" iken JSON
+    tarafı 3.0 kullanıyordu ve aynı pozisyon bir raporda stop'la kapanmış,
+    diğerinde açık görünüyordu.
+    """
+    for vade in ("kisa", "uzun"):
+        config = _reload_config_with(vade)
+        assert config.PAPER_ATR_STOP_MULTIPLIER == config.ATR_STOP_MULTIPLIER
+        # Hedef, stop'a göre ölçeklenir (eski 1.5/2.5 oranı korunur).
+        assert config.PAPER_ATR_TARGET_MULTIPLIER == pytest.approx(
+            config.ATR_STOP_MULTIPLIER * (2.5 / 1.5)
+        )
+
+
+# -- Toz pozisyon süzgeci ---------------------------------------------------
+
+
+def _dust_state():
+    from alsatbotu.config import MIN_POSITION_NOTIONAL
+
+    state = PortfolioState(cash=100.0, starting_capital=10_000.0, peak_equity=10_000.0)
+    state.open_positions["META"] = Position(
+        symbol="META", category="tech", quantity=7.412586648491189e-16,
+        entry_price=613.48, entry_date="2026-09-08", stop_price=600.0,
+    )
+    state.open_positions["KO"] = Position(
+        symbol="KO", category="consumer", quantity=40.0,
+        entry_price=70.0, entry_date="2026-09-01", stop_price=65.0,
+    )
+    assert MIN_POSITION_NOTIONAL == 10.0
+    return state
+
+
+def test_dust_positions_are_dropped_and_real_ones_kept():
+    from portfolio.state import drop_dust_positions
+
+    state = _dust_state()
+    dropped = drop_dust_positions(state, where="test")
+    assert dropped == ["META"]
+    assert set(state.open_positions) == {"KO"}
+
+
+def test_dropping_dust_returns_its_entry_cost_to_cash():
+    from portfolio.state import drop_dust_positions
+
+    state = _dust_state()
+    state.open_positions["META"].quantity = 0.01  # 6.13 -> asgari 10'un altında
+    cash_before = state.cash
+    drop_dust_positions(state, where="test")
+    assert state.cash == pytest.approx(cash_before + 0.01 * 613.48)
+
+
+def test_load_and_save_state_filter_dust():
+    import json
+    import tempfile
+    from pathlib import Path
+
+    from portfolio.state import load_state, save_state
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "portfolio.json"
+        save_state(_dust_state(), path)
+
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        assert set(raw["open_positions"]) == {"KO"}  # save_state hiç yazmaz
+
+        # Süzgeçten önce yazılmış bir dosya okunurken de temizlenir.
+        raw["open_positions"]["META"] = {
+            "symbol": "META", "category": "tech", "quantity": 7.4e-16,
+            "entry_price": 613.48, "entry_date": "2026-09-08", "stop_price": 600.0,
+        }
+        path.write_text(json.dumps(raw), encoding="utf-8")
+        assert set(load_state(path).open_positions) == {"KO"}
+
+
+# -- Stop'a uyulması --------------------------------------------------------
+
+
+def _stop_state():
+    state = PortfolioState(cash=0.0, starting_capital=10_000.0, peak_equity=10_000.0)
+    state.open_positions["NVDA"] = Position(
+        symbol="NVDA", category="tech", quantity=10.0,
+        entry_price=230.36, entry_date="2026-09-05", stop_price=218.60,
+    )
+    return state
+
+
+def _enforce_stop(state, symbol, price):
+    import importlib
+    module = importlib.import_module("scripts.run_portfolio")
+    return module._enforce_stop(state, symbol, price, when="2026-09-11T16:00:00")
+
+
+def test_stop_closes_the_position_without_a_sell_signal():
+    state = _stop_state()
+    assert _enforce_stop(state, "NVDA", 218.36) is True
+    assert "NVDA" not in state.open_positions
+    trade = state.closed_trades[-1]
+    assert trade.reason == "stop_loss"
+    assert trade.exit_price == 218.36
+    assert state.cash == pytest.approx(2183.6)
+
+
+def test_stop_triggers_exactly_at_the_stop_price():
+    state = _stop_state()
+    assert _enforce_stop(state, "NVDA", 218.61) is False
+    assert "NVDA" in state.open_positions
+    assert _enforce_stop(state, "NVDA", 218.60) is True
+
+
+def test_stop_is_a_no_op_without_an_open_position():
+    state = _stop_state()
+    assert _enforce_stop(state, "AAPL", 1.0) is False
+    assert state.closed_trades == []
+
+
+# -- Kategori tolerans bandı ------------------------------------------------
+
+
+def _category_state(xom_price: float):
+    """Enerji kategorisi tek isimde; fiyat verilen seviyeye gelmiş portföy."""
+    state = PortfolioState(cash=4_000.0, starting_capital=10_000.0, peak_equity=10_000.0)
+    state.open_positions["XOM"] = Position(
+        symbol="XOM", category="energy", quantity=40.0,
+        entry_price=100.0, entry_date="2026-09-01", stop_price=90.0,
+    )
+    state.open_positions["KO"] = Position(
+        symbol="KO", category="consumer", quantity=20.0,
+        entry_price=100.0, entry_date="2026-09-01", stop_price=90.0,
+    )
+    return state, {"XOM": xom_price, "KO": 100.0}
+
+
+def test_no_trim_inside_the_tolerance_band():
+    from engine.risk import plan_category_trims
+
+    # XOM 4.000 -> 4.400: equity 10.400, enerji %42.3 (>%40, <%45).
+    state, prices = _category_state(110.0)
+    assert plan_category_trims(state, prices) == []
+
+
+def test_trim_fires_above_the_hard_limit_and_targets_the_entry_limit():
+    from alsatbotu.config import CATEGORY_EXPOSURE_LIMIT_PCT
+    from engine.risk import plan_category_trims
+    from portfolio.state import reduce_position
+
+    # XOM 4.000 -> 6.000: equity 12.000, enerji %50.
+    state, prices = _category_state(150.0)
+    trims = plan_category_trims(state, prices)
+    assert [trim.symbol for trim in trims] == ["XOM"]
+    assert trims[0].share_before == pytest.approx(0.50)
+
+    for trim in trims:
+        reduce_position(
+            state, trim.symbol, trim.quantity, trim.price, "2026-09-11", "category_trim"
+        )
+
+    equity = state.equity(prices)
+    share = state.category_exposure("energy", prices) / equity
+    assert share == pytest.approx(CATEGORY_EXPOSURE_LIMIT_PCT)
+    # Satış equity'yi değiştirmez (komisyon bu motorda modellenmiyor).
+    assert equity == pytest.approx(12_000.0)
+    # Tek koşuda tek kırpma: sonuç bandın içinde, tekrar tetiklenmez.
+    assert plan_category_trims(state, prices) == []
+
+
+def test_trim_takes_from_the_largest_holding_first():
+    from engine.risk import plan_category_trims
+
+    state, prices = _category_state(150.0)
+    state.open_positions["CVX"] = Position(
+        symbol="CVX", category="energy", quantity=5.0,
+        entry_price=100.0, entry_date="2026-09-01", stop_price=90.0,
+    )
+    state.cash -= 500.0
+    prices["CVX"] = 100.0
+    trims = plan_category_trims(state, prices)
+    assert trims[0].symbol == "XOM"
+
+
+def test_reduce_position_keeps_the_remainder_open():
+    from portfolio.state import reduce_position
+
+    state, prices = _category_state(150.0)
+    trade = reduce_position(state, "XOM", 10.0, 150.0, "2026-09-11", "category_trim")
+    assert trade is not None and trade.quantity == 10.0
+    assert trade.pnl == pytest.approx(10.0 * 50.0)
+    position = state.open_positions["XOM"]
+    assert position.quantity == pytest.approx(30.0)
+    assert position.entry_price == 100.0  # giriş fiyatı ve stop'u değişmez
+    assert state.cash == pytest.approx(4_000.0 + 1_500.0)
+
+
+def test_reduce_position_closes_it_when_the_remainder_would_be_dust():
+    from portfolio.state import reduce_position
+
+    state, prices = _category_state(150.0)
+    trade = reduce_position(state, "XOM", 39.95, 150.0, "2026-09-11", "category_trim")
+    assert trade is not None
+    assert "XOM" not in state.open_positions  # kalan 5 birim < asgari 10
+    assert trade.quantity == pytest.approx(40.0)

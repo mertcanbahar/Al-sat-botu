@@ -8,12 +8,19 @@ portfolio is created; once a state file exists it is the source of truth.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from alsatbotu.config import PORTFOLIO_STATE_PATH, STARTING_CAPITAL
+from alsatbotu.config import (
+    MIN_POSITION_NOTIONAL,
+    PORTFOLIO_STATE_PATH,
+    STARTING_CAPITAL,
+)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -77,6 +84,41 @@ class PortfolioState:
         )
 
 
+def drop_dust_positions(
+    state: PortfolioState, where: str, min_notional: float = MIN_POSITION_NOTIONAL
+) -> list[str]:
+    """Toz büyüklüğündeki pozisyonları state'ten düş; düşülen sembolleri döndür.
+
+    Risk motoru artık `MIN_POSITION_NOTIONAL` altındaki bir alımı hiç
+    onaylamıyor, ama daha önce yazılmış state dosyalarında bu kayıtlar
+    duruyor (canlıda META, 7.4e-16 adet) ve raporda "0.000000 adet, %+5.04"
+    gibi anlamsız bir satır üretiyorlar. Süzgeç hem okurken hem yazarken
+    çalışır: eski dosya temizlenerek yüklenir, yeni dosyaya hiç girmez.
+
+    Giriş maliyeti nakde geri verilir -- düşürme, hiç açılmaması gereken bir
+    pozisyonun açılışını geri almaktır; tanımı gereği `min_notional`'dan
+    küçük bir tutardır.
+    """
+    dropped: list[str] = []
+    for symbol, position in list(state.open_positions.items()):
+        notional = position.quantity * position.entry_price
+        if notional >= min_notional:
+            continue
+        del state.open_positions[symbol]
+        state.cash += notional
+        dropped.append(symbol)
+        logger.warning(
+            "%s: toz pozisyon state'ten düşürüldü (%s) — %.12g adet, %.6g tutar "
+            "(asgari %.2f); giriş maliyeti nakde iade edildi",
+            symbol,
+            where,
+            position.quantity,
+            notional,
+            min_notional,
+        )
+    return dropped
+
+
 def _new_state() -> PortfolioState:
     return PortfolioState(
         cash=STARTING_CAPITAL,
@@ -93,7 +135,7 @@ def load_state(path: Path = PORTFOLIO_STATE_PATH) -> PortfolioState:
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)
 
-    return PortfolioState(
+    state = PortfolioState(
         cash=raw["cash"],
         starting_capital=raw["starting_capital"],
         peak_equity=raw["peak_equity"],
@@ -110,10 +152,13 @@ def load_state(path: Path = PORTFOLIO_STATE_PATH) -> PortfolioState:
         stopped=raw.get("stopped", False),
         stop_reason=raw.get("stop_reason"),
     )
+    drop_dust_positions(state, where="load_state")
+    return state
 
 
 def save_state(state: PortfolioState, path: Path = PORTFOLIO_STATE_PATH) -> None:
     """Write `state` to `path` atomically (write to a temp file, then rename)."""
+    drop_dust_positions(state, where="save_state")
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -170,6 +215,48 @@ def open_position(
     state.cash -= quantity * entry_price
     state.open_positions[symbol] = position
     return position
+
+
+def reduce_position(
+    state: PortfolioState,
+    symbol: str,
+    quantity: float,
+    exit_price: float,
+    exit_date: str,
+    reason: str,
+) -> Optional[ClosedTrade]:
+    """Bir pozisyonun `quantity` kadarını sat, kalanı açık bırak.
+
+    Kategori kırpması için var: fazlalık satılır, pozisyonun geri kalanı
+    (ve giriş fiyatı, stop'u) olduğu gibi kalır. Kalan kısım
+    `MIN_POSITION_NOTIONAL` altına düşecekse pozisyon tamamen kapatılır --
+    aksi halde süzgecin temizlediği toz kayıtları bu kez kırpma üretirdi.
+    """
+    position = state.open_positions.get(symbol)
+    if position is None or quantity <= 0:
+        return None
+
+    remaining = position.quantity - quantity
+    if remaining * position.entry_price < MIN_POSITION_NOTIONAL:
+        return close_position(state, symbol, exit_price, exit_date, reason)
+
+    position.quantity = remaining
+    state.cash += quantity * exit_price
+
+    trade = ClosedTrade(
+        symbol=position.symbol,
+        category=position.category,
+        quantity=quantity,
+        entry_price=position.entry_price,
+        exit_price=exit_price,
+        entry_date=position.entry_date,
+        exit_date=exit_date,
+        pnl=quantity * (exit_price - position.entry_price),
+        pnl_pct=(exit_price / position.entry_price - 1.0) if position.entry_price else 0.0,
+        reason=reason,
+    )
+    state.closed_trades.append(trade)
+    return trade
 
 
 def close_position(

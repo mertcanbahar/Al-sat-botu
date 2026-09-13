@@ -33,14 +33,27 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from alsatbotu.config import DATA_DIR, MAX_HALT_RESETS, TREND_SMA_WINDOW, WATCHLIST
+from alsatbotu.config import (
+    CATEGORY_EXPOSURE_LIMIT_PCT,
+    CATEGORY_TRIM_PCT,
+    DATA_DIR,
+    MAX_HALT_RESETS,
+    TREND_SMA_WINDOW,
+    WATCHLIST,
+)
 from alsatbotu.data import get_price_history
 from alsatbotu.indicators import add_indicators
 from alsatbotu.signal import Decision, Signal, evaluate
-from engine.risk import evaluate_buy, update_halt_state
+from engine.risk import evaluate_buy, plan_category_trims, update_halt_state
 from notify.telegram import is_configured as telegram_is_configured, send_message
 from portfolio.ledger import last_decisions, log_signal
-from portfolio.state import close_position, load_state, open_position, save_state
+from portfolio.state import (
+    close_position,
+    load_state,
+    open_position,
+    reduce_position,
+    save_state,
+)
 
 SIGNAL_LABELS = {Signal.BUY: "🟢 AL", Signal.SELL: "🔴 SAT"}
 
@@ -164,6 +177,52 @@ def _market_trend_ok(history: dict[str, list[dict]], window: int = TREND_SMA_WIN
     return index[-1] > sum(index[-window:]) / window
 
 
+def _enforce_stop(state, symbol: str, price: float, when: str) -> bool:
+    """Fiyat stop'un altındaysa pozisyonu SELL sinyali beklemeden kapat.
+
+    Stop fiyatı şimdiye kadar yalnızca pozisyon boyutlandırmasında ve günlük
+    raporun bir uyarı satırında kullanılıyordu; kapatma kararını tek başına
+    kural motorunun SELL sinyali veriyordu. Kural HOLD derken stop delinmiş
+    olabiliyor (canlıda NVDA: değerlendirme motoru stop'la kapattı, JSON
+    portföyü pozisyonu açık gösterdi) -- artık stop'a uyulur.
+    """
+    position = state.open_positions.get(symbol)
+    if position is None or price > position.stop_price:
+        return False
+
+    trade = close_position(
+        state, symbol=symbol, exit_price=price, exit_date=when, reason="stop_loss"
+    )
+    if trade is None:
+        return False
+    print(
+        f"{symbol}: STOP {trade.quantity:.6f} @ {price:.4f} "
+        f"(stop {position.stop_price:.4f}, pnl {trade.pnl_pct * 100:.2f}%)"
+    )
+    return True
+
+
+def _apply_category_trims(state, current_prices: dict[str, float], when: str) -> None:
+    """Sert sınırı (%45) aşan kategorileri giriş limitine (%40) geri çek."""
+    for trim in plan_category_trims(state, current_prices):
+        trade = reduce_position(
+            state,
+            symbol=trim.symbol,
+            quantity=trim.quantity,
+            exit_price=trim.price,
+            exit_date=when,
+            reason="category_trim",
+        )
+        if trade is None:
+            continue
+        print(
+            f"{trim.symbol}: TRIM {trade.quantity:.6f} @ {trim.price:.4f} — "
+            f"{trim.category} kategorisi %{trim.share_before * 100:.1f} ile "
+            f"%{CATEGORY_TRIM_PCT * 100:.0f} sert sınırını aştı, "
+            f"%{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f}'a çekiliyor"
+        )
+
+
 def run(days: int = 60) -> None:
     state = load_state()
     # Read before any new signal is appended, so it reflects the previous run.
@@ -208,6 +267,11 @@ def run(days: int = 60) -> None:
 
         log_signal(symbol, decision, price, latest)
         is_new_signal = previous_decisions.get(symbol) != decision.signal.value
+
+        # Stop, kural motorundan önce gelir. Aynı koşuda stop'la çıkıp
+        # tekrar girmemek için sembolün geri kalan işlemleri atlanır.
+        if _enforce_stop(state, symbol, price, latest["timestamp"].isoformat()):
+            continue
 
         if decision.signal == Signal.BUY:
             risk_decision = evaluate_buy(
@@ -260,6 +324,10 @@ def run(days: int = 60) -> None:
                     telegram_successes += 1
         else:
             print(f"{symbol}: HOLD @ {price:.4f}")
+
+    # Kategori kırpması alım/satımlardan sonra, equity işaretlemesinden önce:
+    # halt bu koşunun nihai portföyünü görsün.
+    _apply_category_trims(state, current_prices, datetime.now(timezone.utc).isoformat())
 
     # Halt durum makinesini bu koşunun equity işaretlemesiyle ilerlet.
     # Bir sonraki koşudaki ALIM'lar buradan çıkan duruma bakar (backtest'te

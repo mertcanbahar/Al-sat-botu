@@ -99,7 +99,18 @@ ATR_STOP_MULTIPLIER = float(
 # "quantity <= 0" kontrolü bunu geçiriyor ve raporda 0.000000 adetlik
 # pozisyon olarak görünüyordu.
 MIN_POSITION_NOTIONAL = float(os.environ.get("ALSATBOTU_MIN_POSITION_NOTIONAL", "10"))
+
+# -- Kategori yoğunlaşması: tolerans bandı -------------------------------
+# İki eşik, tek bir eşiğin iki kusurunu birden çözüyor:
+#   CATEGORY_EXPOSURE_LIMIT_PCT (%40) giriş limitidir -- yeni bir pozisyon
+#   bir kategoriyi bu oranın üstüne çıkaramaz (boyutu kırpılır).
+#   CATEGORY_TRIM_PCT (%45) sert kırpma sınırıdır -- fiyat hareketiyle bir
+#   kategori bunun üstüne çıkarsa fazlası satılarak %40'a geri çekilir.
+# Aradaki 5 puanlık band tolerans: giriş tam limitte yapıldıysa %1'lik bir
+# fiyat hareketi kırpma tetiklemesin, aksi halde her gün birkaç kuruşluk
+# satış yapıp komisyon yakardık.
 CATEGORY_EXPOSURE_LIMIT_PCT = 0.40
+CATEGORY_TRIM_PCT = 0.45
 MAX_OPEN_POSITIONS = int(
     os.environ.get("ALSATBOTU_MAX_OPEN_POSITIONS", _VADE_PROFILI["max_open_positions"])
 )
@@ -185,8 +196,18 @@ PAPER_STARTING_CAPITAL = float(os.environ.get("ALSATBOTU_PAPER_STARTING_CAPITAL"
 PAPER_RISK_PER_TRADE_PCT = 0.01  # 1% of current equity notional per trade
 PAPER_COMMISSION_PCT = 0.0015    # 0.15% commission, charged on entry and exit
 PAPER_SLIPPAGE_PCT = 0.0005      # 0.05% slippage, charged on entry and exit
-PAPER_ATR_STOP_MULTIPLIER = 1.5
-PAPER_ATR_TARGET_MULTIPLIER = 2.5
+# Stop çarpanı iki motorda da aynı olmalı. Eskiden burası sabit 1.5'ti,
+# JSON portföyü ise vade profilinden gelen ATR_STOP_MULTIPLIER'ı (uzun: 3.0)
+# kullanıyordu; aynı pozisyon SQLite motorunda stop'la kapanırken JSON
+# tarafında açık kalıyordu ve iki günlük rapor birbiriyle çelişiyordu
+# (ör. NVDA 10 Eylül). Artık tek kaynak ATR_STOP_MULTIPLIER.
+PAPER_ATR_STOP_MULTIPLIER = float(
+    os.environ.get("ALSATBOTU_PAPER_ATR_STOP_MULTIPLIER", ATR_STOP_MULTIPLIER)
+)
+# Hedef, stop'a göre ölçeklenir: eski 1.5/2.5 çifti 1:1.67 risk/ödül
+# oranıydı, stop genişleyince hedef de aynı oranda genişlemezse pozisyonlar
+# hedefe stop'tan çok daha erken çarpar.
+PAPER_ATR_TARGET_MULTIPLIER = PAPER_ATR_STOP_MULTIPLIER * (2.5 / 1.5)
 PAPER_MAX_TRADES_PER_DAY = 100
 
 OUTCOME_HORIZONS_HOURS = {"price_1h": 1, "price_24h": 24, "price_7d": 24 * 7}
