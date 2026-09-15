@@ -84,6 +84,13 @@
 
   .muted { color: var(--muted); }
   .empty { color: var(--muted); font-size: 0.8rem; padding: 14px 0; text-align: center; }
+  #data-errors {
+    margin: 0 auto 14px; max-width: 1200px; padding: 10px 14px;
+    border: 1px solid #ffb02055; border-left: 3px solid #ffb020; border-radius: 6px;
+    background: #ffb0200f; color: #ffb020; font-size: 0.8rem; line-height: 1.6;
+  }
+  #data-errors strong { display: block; margin-bottom: 4px; }
+  #data-errors code { color: #ffd27a; }
 
   .up { color: var(--up); }
   .down { color: var(--down); }
@@ -428,6 +435,7 @@
   <button type="button" data-tab="kripto">Kripto</button>
 </nav>
 <div id="tab-inactive-msg">Bu varlık sınıfı henüz aktif değil.</div>
+<div id="data-errors" hidden></div>
 
 <main id="app">
 
@@ -551,16 +559,52 @@
     container.innerHTML = `<div class="empty">${message}</div>`;
   }
 
-  async function fetchJson(url) {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+  /* Okunamayan kaynaklar: url -> kullanıcıya gösterilecek gerçek sebep.
+     Eskiden her yükleyici hatayı yutup boş dizi döndürüyordu; 404 ile ağ
+     hatası ile bozuk JSON arasında hiçbir fark görünmüyor, panel sadece
+     "veri yok" diyordu. Artık sebep hem panelde hem konsolda yazıyor. */
+  const LOAD_ERRORS = new Map();
+
+  function reasonFor(...urls) {
+    for (const url of urls) {
+      if (LOAD_ERRORS.has(url)) return LOAD_ERRORS.get(url);
+    }
+    return null;
   }
 
   async function fetchText(url) {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let res;
+    try {
+      res = await fetch(url, { cache: "no-store" });
+    } catch (_e) {
+      // fetch yalnızca ağ/CORS katmanında patlar; HTTP hataları res.ok ile gelir.
+      throw new Error("ağ hatası — dosya sunulmuyor ya da sayfa file:// ile açıldı");
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}${res.statusText ? " " + res.statusText : ""}`);
     return await res.text();
+  }
+
+  async function fetchJson(url) {
+    const text = await fetchText(url);
+    try {
+      return JSON.parse(text);
+    } catch (_e) {
+      throw new Error("geçersiz JSON");
+    }
+  }
+
+  /* Tek giriş noktası: hatayı kaydeder, konsola yazar, sebebi döndürür. */
+  async function loadSource(url, loader) {
+    try {
+      const value = await loader(url);
+      LOAD_ERRORS.delete(url);
+      return { ok: true, value };
+    } catch (err) {
+      const error = `${url} okunamadı (${err.message})`;
+      LOAD_ERRORS.set(url, error);
+      console.error(`[dashboard] ${error}`);
+      return { ok: false, error };
+    }
   }
 
   function parseJsonl(text) {
@@ -598,49 +642,39 @@
   /* ------------------------------------------------------------------ */
 
   async function loadWatchlist() {
-    try {
-      const data = await fetchJson(WATCHLIST_URL);
-      return Array.isArray(data) ? data : [];
-    } catch (_e) {
-      return [];
-    }
+    const res = await loadSource(WATCHLIST_URL, async (url) => {
+      const data = await fetchJson(url);
+      if (!Array.isArray(data)) throw new Error("beklenen biçim dizi değil");
+      return data;
+    });
+    return res.ok ? res.value : [];
   }
 
   async function loadPortfolio() {
-    try {
-      return { ok: true, data: await fetchJson(PORTFOLIO_URL) };
-    } catch (err) {
-      return { ok: false, error: err.message || "okunamadı" };
-    }
+    const res = await loadSource(PORTFOLIO_URL, fetchJson);
+    return res.ok ? { ok: true, data: res.value } : { ok: false, error: res.error };
   }
 
   async function loadSignals() {
-    try {
-      const text = await fetchText(SIGNALS_URL);
-      return { ok: true, signals: parseJsonl(text) };
-    } catch (err) {
-      return { ok: false, error: err.message || "okunamadı", signals: [] };
-    }
+    const res = await loadSource(SIGNALS_URL, async (url) => parseJsonl(await fetchText(url)));
+    return res.ok
+      ? { ok: true, signals: res.value }
+      : { ok: false, error: res.error, signals: [] };
   }
 
   async function loadHealth() {
-    try {
-      return { ok: true, data: await fetchJson(HEALTH_URL) };
-    } catch (_err) {
-      return { ok: false };
-    }
+    const res = await loadSource(HEALTH_URL, fetchJson);
+    return res.ok ? { ok: true, data: res.value } : { ok: false, error: res.error };
   }
 
   async function loadEquity() {
-    try {
-      const text = await fetchText(EQUITY_URL);
-      const rows = parseJsonl(text)
+    const res = await loadSource(EQUITY_URL, async (url) => {
+      const rows = parseJsonl(await fetchText(url))
         .map((r) => ({ date: r.date || r.timestamp, value: r.value != null ? r.value : r.equity }))
         .filter((r) => r.date && typeof r.value === "number" && isFinite(r.value));
-      return { ok: rows.length > 0, rows };
-    } catch (_err) {
-      return { ok: false, rows: [] };
-    }
+      return rows;
+    });
+    return res.ok ? { ok: res.value.length > 0, rows: res.value } : { ok: false, rows: [] };
   }
 
   /* ------------------------------------------------------------------ */
@@ -686,7 +720,7 @@
 
   function renderPriceGrid(container, symbolState, watchlist) {
     const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
-    if (!symbols.length) { empty(container, "veri yok"); return; }
+    if (!symbols.length) { empty(container, reasonFor(WATCHLIST_URL, SIGNALS_URL) || "veri yok"); return; }
 
     container.innerHTML = symbols
       .map((symbol) => {
@@ -748,7 +782,7 @@
         <span class="${cls}">${avg != null ? fmtPct(avg) : "—"}</span>
       </div>`;
     });
-    if (!rows.length) { empty(container); return; }
+    if (!rows.length) { empty(container, reasonFor(SIGNALS_URL) || "veri yok"); return; }
     container.innerHTML = rows.join("");
   }
 
@@ -857,7 +891,7 @@
 
   function renderSphere(container, symbolState, watchlist, portfolio) {
     const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
-    if (!symbols.length) { empty(container, "watchlist.json yok"); return; }
+    if (!symbols.length) { empty(container, reasonFor(WATCHLIST_URL, SIGNALS_URL) || "watchlist.json yok"); return; }
 
     const size = 300;
     const cx = size / 2, cy = size / 2;
@@ -951,7 +985,7 @@
 
   function renderSignalPanel(container, signals, portfolio) {
     const last = latestOverallSignal(signals);
-    if (!last) { container.innerHTML = `<div class="empty">sinyal bekleniyor</div>`; return; }
+    if (!last) { empty(container, reasonFor(SIGNALS_URL) || "sinyal bekleniyor"); return; }
 
     const cls = last.decision === "BUY" ? "al" : last.decision === "SELL" ? "sat" : "bekle";
     const reasons = Array.isArray(last.triggering_rule) ? last.triggering_rule : [];
@@ -1048,7 +1082,7 @@
 
   function renderHeatmap(container, symbolState, watchlist) {
     const symbols = watchlist.length ? watchlist.map((w) => w.symbol) : Object.keys(symbolState);
-    if (!symbols.length) { empty(container, "veri yok"); return; }
+    if (!symbols.length) { empty(container, reasonFor(WATCHLIST_URL, SIGNALS_URL) || "veri yok"); return; }
 
     container.innerHTML = symbols
       .map((symbol) => {
@@ -1070,7 +1104,7 @@
   /* ------------------------------------------------------------------ */
 
   function renderLastSignals(container, signals) {
-    if (!signals.length) { empty(container, "henüz sinyal yok"); return; }
+    if (!signals.length) { empty(container, reasonFor(SIGNALS_URL) || "henüz sinyal yok"); return; }
     const rows = [...signals]
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, 15)
@@ -1084,14 +1118,14 @@
   }
 
   function renderPortfolioRing(container, portfolio) {
-    if (!portfolio) { empty(container); return; }
+    if (!portfolio) { empty(container, reasonFor(PORTFOLIO_URL) || "veri yok"); return; }
     const positionsValue = Object.values(portfolio.open_positions || {}).reduce(
       (sum, p) => sum + p.quantity * p.entry_price,
       0
     );
     const cash = portfolio.cash || 0;
     const total = cash + positionsValue;
-    if (!total) { empty(container); return; }
+    if (!total) { empty(container, reasonFor(PORTFOLIO_URL) || "veri yok"); return; }
 
     const cashFrac = cash / total;
     const r = 45, cx = 60, cy = 60;
@@ -1135,7 +1169,7 @@
   }
 
   function renderEquity(container, points) {
-    if (!points.length) { empty(container, "veri yok"); return; }
+    if (!points.length) { empty(container, reasonFor(EQUITY_URL, PORTFOLIO_URL) || "veri yok"); return; }
 
     const w = 600, h = 180, pad = { top: 10, right: 10, bottom: 20, left: 50 };
     const values = points.map((p) => p.value);
@@ -1176,7 +1210,7 @@
 
   function renderPositions(container, portfolio, symbolState) {
     const positions = Object.values((portfolio && portfolio.open_positions) || {});
-    if (!positions.length) { empty(container, "açık pozisyon yok"); return; }
+    if (!positions.length) { empty(container, reasonFor(PORTFOLIO_URL) || "açık pozisyon yok"); return; }
     const rows = positions
       .map((p) => {
         const hist = (symbolState[p.symbol] && symbolState[p.symbol].history) || [];
@@ -1190,7 +1224,7 @@
   }
 
   function renderRisk(container, portfolio) {
-    if (!portfolio) { empty(container); return; }
+    if (!portfolio) { empty(container, reasonFor(PORTFOLIO_URL) || "veri yok"); return; }
     const peak = portfolio.peak_equity || 0;
     const positionsValue = Object.values(portfolio.open_positions || {}).reduce(
       (sum, p) => sum + p.quantity * p.entry_price,
@@ -1208,7 +1242,7 @@
 
   function renderSystem(container, health) {
     if (!health.ok || !health.data || !Array.isArray(health.data.modules)) {
-      empty(container, "izleme yok");
+      empty(container, reasonFor(HEALTH_URL) || "izleme yok");
       return;
     }
     const rows = health.data.modules
@@ -1300,6 +1334,20 @@
   /* Main refresh                                                        */
   /* ------------------------------------------------------------------ */
 
+  function renderDataErrors(container) {
+    if (!LOAD_ERRORS.size) {
+      container.hidden = true;
+      container.innerHTML = "";
+      return;
+    }
+    const items = [...LOAD_ERRORS.values()].map((msg) => `<div>• ${msg}</div>`).join("");
+    container.hidden = false;
+    container.innerHTML =
+      `<strong>⚠️ Veri dosyaları okunamadı — paneller bu yüzden boş.</strong>${items}` +
+      `<div>Bu dosyalar <code>data/</code>'dan yayım sırasında üretilir; ` +
+      `repodaki <code>docs/</code> klasöründe bulunmazlar.</div>`;
+  }
+
   async function refresh() {
     const [watchlist, portfolioResult, signalsResult, health, equity] = await Promise.all([
       loadWatchlist(),
@@ -1313,6 +1361,7 @@
     const signals = signalsResult.signals || [];
     const symbolState = buildSymbolState(watchlist, signals, portfolio);
 
+    renderDataErrors(document.getElementById("data-errors"));
     renderPriceGrid(document.getElementById("pricegrid-body"), symbolState, watchlist);
     renderSector(document.getElementById("sector-body"), symbolState);
     renderSectorColumns(document.getElementById("sectorcols-body"), symbolState);
