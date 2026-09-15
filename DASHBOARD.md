@@ -13,11 +13,25 @@ Panel aynı repodaki iki dosyayı `fetch` ile okur:
   tarih, tetikleyen kural, indikatör değerleri)
 
 Ayrıca `alsatbotu/config.py` içindeki WATCHLIST ve kategori haritasının bir
-kopyası `docs/watchlist.json` olarak üretilsin (workflow adımı), böylece panel
-sembol listesini ve kategorileri bilir.
+kopyası `docs/watchlist.json` olarak üretilir, böylece panel sembol listesini
+ve kategorileri bilir.
 
-**Veri yoksa panel çökmez.** Her bölüm boş durumda "veri yok" gösterir.
-Sayılar `—` olur, renkler nötr kalır.
+Panel bu beş dosyayı **göreli** yolla okur (`watchlist.json`,
+`data/portfolio.json`, `data/signals.jsonl`, `data/health.json`,
+`data/equity.jsonl`), yani hepsi `docs/` altında bulunmak zorunda.
+`scripts/sync_docs_data.py` bu kopyayı `data/`'dan üretir; `data/` tek
+kaynaktır, `docs/` altındaki hiçbir veri dosyası elle yazılmaz.
+
+Kopya **commit'lenir**. GitHub Pages bu repoyu "Deploy from a branch"
+(main / docs) ile yayımladığı için yalnızca commit'li dosyalar yayına çıkar;
+deploy anında üretmek yetmez (branch build'i o deployment'ın üstüne yazar ve
+panel her fetch'te 404 alır). Veriyi yazan workflow betiği çalıştırıp
+`docs/`'u da commit'ler.
+
+**Veri yoksa panel çökmez.** Her bölüm boş durumda sebebi yazar: dosya
+okunamıyorsa "watchlist.json okunamadı (HTTP 404)" gibi gerçek hata, sayfanın
+üstünde de okunamayan tüm kaynakları listeleyen bir uyarı şeridi. Kaynak
+okunabiliyor ama içerik boşsa eski metin ("açık pozisyon yok") korunur.
 
 ## Görünüm
 
@@ -149,10 +163,19 @@ Canvas veya kütüphane kullanma.
 
 ## Yayınlama
 
-`.github/workflows/pages.yml`:
-- `main`'e her push'ta çalışır
-- `docs/` klasörünü GitHub Pages artifact olarak yükler ve yayınlar
-- `permissions: pages: write, id-token: write` gerekli
+İki yol da siteyi yayımlıyor, ikisi de aynı içeriği görmeli:
+
+1. **GitHub'ın branch build'i** (`pages-build-deployment`): Pages ayarı
+   "Deploy from a branch → main / docs" olduğu için main'e giden her push'ta
+   `docs/` klasörünü Jekyll'den geçirip yayımlar. Yalnızca **commit'li**
+   dosyaları görür — panelin veri dosyalarının repoda durmasının sebebi bu.
+2. `.github/workflows/pages.yml`: `docs/`'u artifact olarak yükleyip Actions
+   üzerinden yayımlar (`permissions: pages: write, id-token: write`). Önce
+   `scripts/sync_docs_data.py` koşar, böylece bir koşu `docs/`'u güncellemeyi
+   atlamış olsa bile deployment taze veriyle çıkar.
+
+Pages ayarı ileride "GitHub Actions"a çevrilirse (1) devre dışı kalır ve (2)
+tek yayımcı olur; `docs/` altındaki kopya o senaryoda da zararsızdır.
 
 ## Kısıtlar
 

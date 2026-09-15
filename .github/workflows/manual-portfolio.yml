@@ -40,16 +40,21 @@ jobs:
       - name: Run portfolio update
         run: python scripts/run_portfolio.py "${{ inputs.days || '60' }}"
 
-      # docs/data/ and docs/watchlist.json are no longer generated or
-      # committed here: they are build output, generated from data/ inside
-      # pages.yml at deploy time, so data/ stays the single source of
-      # truth instead of a second, manually-synced copy.
+      # Pages bu repoyu "Deploy from a branch" (main / docs) ile yayımlıyor:
+      # yalnızca commit'li dosyalar yayına çıkar. Bu yüzden panelin okuduğu
+      # kopya docs/ altına yazılıp veriyle birlikte commit'lenir. data/ hâlâ
+      # tek kaynak; docs/ elle değil bu betikle üretilir.
+      - name: Sync dashboard copy under docs/
+        run: python scripts/sync_docs_data.py
+
       - name: Commit and push portfolio state
         id: commit_and_push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl; do
+          for f in data/portfolio.json data/signals.jsonl data/health.json data/equity.jsonl \
+                   docs/watchlist.json docs/data/portfolio.json docs/data/signals.jsonl \
+                   docs/data/health.json docs/data/equity.jsonl; do
             [ -f "$f" ] && git add "$f"
           done
           if git diff --cached --quiet; then
