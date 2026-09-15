@@ -9,7 +9,9 @@ Rules:
   - No single position may hold more than `MAX_POSITION_ALLOCATION_PCT` of
     equity (VADE profile; never above `POSITION_ALLOCATION_HARD_CAP` = 15%).
   - No single category (see `alsatbotu.config.SYMBOL_CATEGORIES`) may hold
-    more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity.
+    more than `CATEGORY_EXPOSURE_LIMIT_PCT` (40%) of equity at entry; if
+    price moves push it past `CATEGORY_TRIM_PCT` (45%), `plan_category_trims()`
+    sells the excess back down to 40%.
   - At most `MAX_OPEN_POSITIONS` positions open at once (VADE profile:
     5 on "uzun", 10 on "kisa").
   - A trade whose sized notional falls below `MIN_POSITION_NOTIONAL` is
@@ -25,6 +27,7 @@ from typing import Optional
 
 from alsatbotu.config import (
     CATEGORY_EXPOSURE_LIMIT_PCT,
+    CATEGORY_TRIM_PCT,
     DRAWDOWN_RELEASE_PCT,
     HALT_HARD_FLOOR_PCT,
     HALT_RESET_AFTER_MARKS,
@@ -234,6 +237,82 @@ def update_halt_state(
         )
 
     return event(None)
+
+
+@dataclass
+class CategoryTrim:
+    """Bir kategoriyi tolerans bandının içine geri çekmek için satılacak miktar."""
+
+    symbol: str
+    category: str
+    quantity: float
+    price: float
+    share_before: float
+
+    @property
+    def notional(self) -> float:
+        return self.quantity * self.price
+
+
+def plan_category_trims(
+    state: PortfolioState, current_prices: dict[str, float]
+) -> list[CategoryTrim]:
+    """Kategori payı sert sınırı aşan pozisyonlar için kırpma planı.
+
+    Kategori limiti şimdiye kadar yalnızca giriş anında kontrol ediliyordu:
+    tam %40'ta açılan bir pozisyon fiyat arttıkça %41-42'ye çıkıyor ve orada
+    kalıyordu (canlıda XOM, %41.4). Tolerans bandı bunu ikiye ayırır:
+      - %40 (CATEGORY_EXPOSURE_LIMIT_PCT): giriş limiti, `evaluate_buy`
+        yeni pozisyonu bunun üstüne çıkaracak kadar büyütmez.
+      - %45 (CATEGORY_TRIM_PCT): sert sınır. Fiyat hareketiyle buranın
+        üstüne çıkılırsa fazlalık satılıp kategori %40'a geri çekilir.
+    Arada bir şey yapılmaz; band, her küçük dalgalanmada komisyon yakan
+    kırpma zincirini engeller.
+
+    Fazlalık en büyük pozisyondan başlanarak satılır: yoğunlaşmayı yaratan
+    isim hangisiyse düzeltme onun üstünde yapılır. Satış nakde döndüğü için
+    equity (dolayısıyla hedef) plan boyunca sabit kalır.
+    """
+    equity = state.equity(current_prices)
+    if equity <= 0:
+        return []
+
+    trims: list[CategoryTrim] = []
+    categories = {position.category for position in state.open_positions.values()}
+    for category in sorted(categories):
+        exposure = state.category_exposure(category, current_prices)
+        share = exposure / equity
+        if share <= CATEGORY_TRIM_PCT:
+            continue
+
+        excess = exposure - equity * CATEGORY_EXPOSURE_LIMIT_PCT
+        holdings = sorted(
+            (
+                (symbol, position, current_prices.get(symbol, position.entry_price))
+                for symbol, position in state.open_positions.items()
+                if position.category == category
+            ),
+            key=lambda item: item[1].quantity * item[2],
+            reverse=True,
+        )
+        for symbol, position, price in holdings:
+            if excess <= 0 or price <= 0:
+                break
+            sell_quantity = min(position.quantity, excess / price)
+            if sell_quantity <= 0:
+                continue
+            trims.append(
+                CategoryTrim(
+                    symbol=symbol,
+                    category=category,
+                    quantity=sell_quantity,
+                    price=price,
+                    share_before=share,
+                )
+            )
+            excess -= sell_quantity * price
+
+    return trims
 
 
 @dataclass

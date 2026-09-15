@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
+      ALSATBOTU_VADE: ${{ vars.ALSATBOTU_VADE || 'uzun' }}
       TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
     steps:
       - uses: actions/checkout@v4

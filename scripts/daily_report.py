@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from alsatbotu.config import (
     CATEGORY_EXPOSURE_LIMIT_PCT,
+    CATEGORY_TRIM_PCT,
     DRAWDOWN_RELEASE_PCT,
     MAX_DRAWDOWN_PCT,
     MAX_HALT_RESETS,
@@ -136,10 +137,17 @@ def _warnings(state: PortfolioState, current_prices: dict[str, float], equity: f
         categories = {position.category for position in state.open_positions.values()}
         for category in sorted(categories):
             share = state.category_exposure(category, current_prices) / equity
-            if share > CATEGORY_EXPOSURE_LIMIT_PCT:
+            if share > CATEGORY_TRIM_PCT:
                 warnings.append(
                     f"{category} kategorisi %{share * 100:.1f} ile "
-                    f"%{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f} limitini aştı"
+                    f"%{CATEGORY_TRIM_PCT * 100:.0f} sert sınırını aştı — "
+                    f"sonraki koşuda %{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f}'a kırpılacak"
+                )
+            elif share > CATEGORY_EXPOSURE_LIMIT_PCT:
+                warnings.append(
+                    f"{category} kategorisi %{share * 100:.1f} ile "
+                    f"%{CATEGORY_EXPOSURE_LIMIT_PCT * 100:.0f} giriş limitinin üstünde "
+                    f"(tolerans bandı %{CATEGORY_TRIM_PCT * 100:.0f}'e kadar)"
                 )
             elif share >= CATEGORY_EXPOSURE_LIMIT_PCT * WARN_THRESHOLD:
                 warnings.append(
@@ -151,7 +159,8 @@ def _warnings(state: PortfolioState, current_prices: dict[str, float], equity: f
         price = current_prices.get(symbol)
         if price is not None and price <= position.stop_price:
             warnings.append(
-                f"{symbol} fiyatı {price:.4f}, stop seviyesi {position.stop_price:.4f} altında"
+                f"{symbol} fiyatı {price:.4f}, stop seviyesi {position.stop_price:.4f} "
+                "altında — pozisyon sonraki koşuda stop'la kapatılacak"
             )
 
     if state.cash <= 0:
