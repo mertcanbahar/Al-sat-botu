@@ -46,7 +46,7 @@ def run(days: int = 60) -> None:
     for entry in WATCHLIST:
         symbol = entry["symbol"]
         source = entry.get("source", "coingecko")
-        asset_type = asset_type_for(source)
+        asset_type = asset_type_for(source, entry.get("category"))
 
         try:
             rows = get_price_history(symbol, source=source, days=days)

@@ -127,14 +127,22 @@ def answer_callback_query(callback_query_id: str, text: str | None = None) -> bo
     return _call("answerCallbackQuery", payload) is not None
 
 
-def get_updates(offset: Optional[int] = None, timeout: int = 0) -> list[dict]:
+def get_updates(
+    offset: Optional[int] = None,
+    timeout: int = 0,
+    allowed_updates: Optional[list[str]] = None,
+) -> list[dict]:
     """Fetch pending updates (short poll -- meant to be called from a cron job, not a daemon).
 
     `offset` should be the last-processed update_id + 1, so Telegram
     doesn't redeliver updates the caller already handled. Returns an
     empty list on any failure or when unconfigured.
+
+    `allowed_updates` defaults to `["callback_query"]` (the strategy-approval
+    flow's needs); pass e.g. `["callback_query", "message"]` for a caller
+    that also wants to react to plain text messages.
     """
-    payload: dict = {"timeout": timeout, "allowed_updates": ["callback_query"]}
+    payload: dict = {"timeout": timeout, "allowed_updates": allowed_updates or ["callback_query"]}
     if offset is not None:
         payload["offset"] = offset
     result = _call("getUpdates", payload)

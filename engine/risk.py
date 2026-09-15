@@ -19,6 +19,9 @@ Rules:
   - No new BUYs while the portfolio is drawdown-halted; existing positions
     may still be sold. The halt is a latching state with hysteresis, not an
     instantaneous test -- see `HaltPolicy` and `update_halt_state()` below.
+  - No new BUYs while `state.paused` is set (manual Telegram pause,
+    independent of the halt/stop machinery -- existing positions may still
+    be sold). See `scripts/process_telegram_controls.py`.
 """
 from __future__ import annotations
 
@@ -360,6 +363,9 @@ def evaluate_buy(
             f"altında (%{_drawdown(equity, state.peak_equity) * 100:.2f}), "
             f"{state.halted_marks} işaretlemedir halt'ta"
         )
+
+    if state.paused:
+        reasons.append(f"Bot Telegram üzerinden manuel olarak duraklatıldı ({state.paused_reason})")
 
     if len(state.open_positions) >= MAX_OPEN_POSITIONS:
         reasons.append(f"Max open positions reached ({MAX_OPEN_POSITIONS})")

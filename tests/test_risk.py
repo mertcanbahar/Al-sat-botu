@@ -173,6 +173,26 @@ def test_evaluate_buy_blocks_while_stopped_and_says_approval_is_needed():
     assert any("insan onayı" in r for r in decision.reasons)
 
 
+def test_evaluate_buy_blocks_while_manually_paused():
+    state = cash_state(100_000.0)
+    state.paused = True
+    state.paused_reason = "Telegram"
+
+    decision = evaluate_buy(state, "AAPL", "tech", 100.0, 2.0, {})
+    assert not decision.approved
+    assert any("duraklatıldı" in r for r in decision.reasons)
+
+
+def test_evaluate_buy_allows_after_manual_resume():
+    state = cash_state(100_000.0)
+    state.paused = True
+    state.paused = False
+    state.paused_reason = None
+
+    decision = evaluate_buy(state, "AAPL", "tech", 100.0, 2.0, {})
+    assert decision.approved and decision.quantity > 0
+
+
 # -- Trend kapısı -----------------------------------------------------------
 
 

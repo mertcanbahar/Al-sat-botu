@@ -67,6 +67,14 @@ class PortfolioState:
     stopped: bool = False
     stop_reason: Optional[str] = None
 
+    # Manuel duraklatma: Telegram'daki "⏸ Duraklat" butonuyla açılır, "▶️ Devam
+    # Et" ile kapanır (scripts/process_telegram_controls.py). `halted`/`stopped`
+    # ile bağımsızdır -- risk motorunun kendi kararı değil, insanın anlık
+    # tercihidir. Açıkken de mevcut pozisyonların SATIŞI çalışmaya devam eder,
+    # yalnızca yeni ALIM durur (bkz. engine/risk.py evaluate_buy).
+    paused: bool = False
+    paused_reason: Optional[str] = None
+
     def position_value(self, current_prices: dict[str, float]) -> float:
         return sum(
             position.quantity * current_prices.get(symbol, position.entry_price)
@@ -151,6 +159,8 @@ def load_state(path: Path = PORTFOLIO_STATE_PATH) -> PortfolioState:
         halt_resets=raw.get("halt_resets", 0),
         stopped=raw.get("stopped", False),
         stop_reason=raw.get("stop_reason"),
+        paused=raw.get("paused", False),
+        paused_reason=raw.get("paused_reason"),
     )
     drop_dust_positions(state, where="load_state")
     return state
@@ -176,6 +186,8 @@ def save_state(state: PortfolioState, path: Path = PORTFOLIO_STATE_PATH) -> None
         "halt_resets": state.halt_resets,
         "stopped": state.stopped,
         "stop_reason": state.stop_reason,
+        "paused": state.paused,
+        "paused_reason": state.paused_reason,
     }
 
     tmp_path = path.with_suffix(path.suffix + ".tmp")

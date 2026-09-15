@@ -43,8 +43,14 @@ Tek sütun, yukarıdan aşağı:
 
 1. **Üst şerit** — logo, "AL/SAT ZEKA SISTEMI", canlı noktası, son
    çalıştırma saati
-2. **Sekmeler** — Borsa / Forex / Kripto. Şu an sadece Borsa dolu; diğer
-   ikisi tıklanınca "bu varlık sınıfı henüz aktif değil" yazsın
+2. **Sekmeler** — Borsa / Forex / Kripto. Borsa ve Forex dolu (WATCHLIST'teki
+   `category` alanına göre filtrelenir); Kripto şu an watchlist'te sembolü
+   olmadığı için boş -- panel çökmez, her bölüm "veri yok" gösterir. Nakit/
+   pozisyon değeri/drawdown/halt gibi portföy geneli paneller (risk, metrik,
+   footer, equity, ring) sekmeden bağımsız her zaman tüm portföyü gösterir;
+   tek bir ortak nakit havuzu ve tek bir halt mekanizması var, varlık
+   sınıfına göre bölünmüyor. Sektör trendleri/sütunları yalnızca Borsa
+   sekmesinde görünür (forex/kripto'da sektör kavramı yok).
 3. **Fiyat ızgarası** — 3 sütunlu, her hücre: sembol, son fiyat, günlük yüzde
 4. **Orta blok** — üç parça yan yana:
    - Sol dar sütun: sektör trendleri (mini çizgi + yüzde)

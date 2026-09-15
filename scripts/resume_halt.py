@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -45,6 +46,67 @@ from alsatbotu.config import (
 )
 from alsatbotu.data import get_price_history
 from portfolio.state import PortfolioState, load_state, save_state
+
+
+@dataclass
+class ResumeResult:
+    """`attempt_resume()`'un sonucu. `applied=False` ise `state` değiştirilmemiştir."""
+
+    applied: bool
+    messages: list[str] = field(default_factory=list)
+
+
+def attempt_resume(
+    state: PortfolioState,
+    equity: float,
+    peak_sifirla: bool = False,
+    sermaye_sifirla: bool = False,
+) -> ResumeResult:
+    """Kalıcı durdurmayı kaldırmayı dener; `state`'i yerinde değiştirir.
+
+    CLI (`main()`) ve Telegram buton akışı (`scripts/process_telegram_controls.py`)
+    aynı güvenlik kontrollerini paylaşsın diye buraya çıkarıldı -- sert taban ve
+    drawdown kontrolleri iki yerde ayrı ayrı yazılırsa er ya da geç birbirinden
+    sapar. Çağıran, `applied=True` dönerse `save_state()` çağırmaktan sorumludur.
+    """
+    if not state.stopped:
+        return ResumeResult(applied=False, messages=["Bot kalıcı olarak durdurulmuş değil; yapılacak bir şey yok."])
+
+    floor = state.starting_capital * HALT_HARD_FLOOR_PCT
+    if equity < floor and not sermaye_sifirla:
+        return ResumeResult(
+            applied=False,
+            messages=[
+                f"UYARI: equity {equity:,.2f} hâlâ sert tabanın ({floor:,.2f}) altında. "
+                "Durdurma kaldırılsa da bot bir sonraki koşuda yeniden duracak.\n"
+                "       Gerçekten devam etmesini istiyorsanız --sermaye-sifirla ekleyin "
+                "(başlangıç sermayesi güncel equity'ye çekilir).\n"
+                "       Hiçbir şey değiştirilmedi."
+            ],
+        )
+
+    messages: list[str] = []
+    drawdown = (state.peak_equity - equity) / state.peak_equity if state.peak_equity > 0 else 0.0
+    if drawdown >= MAX_DRAWDOWN_PCT and not peak_sifirla:
+        messages.append(
+            f"UYARI: drawdown hâlâ %{drawdown * 100:.2f} (halt limiti "
+            f"%{MAX_DRAWDOWN_PCT * 100:.0f}). Kalıcı durdurma kalkar ama bot bir "
+            "sonraki koşuda doğrudan normal halt'a girer.\n"
+            "       Sıfırdan başlamasını istiyorsanız --peak-sifirla ekleyin."
+        )
+
+    state.stopped = False
+    state.stop_reason = None
+    state.halted = False
+    state.halted_since = None
+    state.halted_marks = 0
+    state.halt_resets = 0
+    if sermaye_sifirla:
+        state.starting_capital = equity
+    if peak_sifirla:
+        state.peak_equity = equity
+
+    return ResumeResult(applied=True, messages=messages)
 
 
 def current_prices(state: PortfolioState, days: int = 7) -> dict[str, float]:
@@ -120,36 +182,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # Onay verilmiş olsa bile, durduran koşul hâlâ geçerliyse bot bir sonraki
     # koşuda anında yeniden durur. Sessizce olmasın.
-    floor = state.starting_capital * HALT_HARD_FLOOR_PCT
-    if equity < floor and not args.sermaye_sifirla:
-        print(
-            f"UYARI: equity {equity:,.2f} hâlâ sert tabanın ({floor:,.2f}) altında. "
-            "Durdurma kaldırılsa da bot bir sonraki koşuda yeniden duracak.\n"
-            "       Gerçekten devam etmesini istiyorsanız --sermaye-sifirla ekleyin "
-            "(başlangıç sermayesi güncel equity'ye çekilir).\n"
-            "       Hiçbir şey değiştirilmedi."
-        )
+    result = attempt_resume(
+        state, equity, peak_sifirla=args.peak_sifirla, sermaye_sifirla=args.sermaye_sifirla
+    )
+    for message in result.messages:
+        print(message)
+    if not result.applied:
         return 1
-
-    drawdown = (state.peak_equity - equity) / state.peak_equity if state.peak_equity > 0 else 0.0
-    if drawdown >= MAX_DRAWDOWN_PCT and not args.peak_sifirla:
-        print(
-            f"UYARI: drawdown hâlâ %{drawdown * 100:.2f} (halt limiti "
-            f"%{MAX_DRAWDOWN_PCT * 100:.0f}). Kalıcı durdurma kalkar ama bot bir "
-            "sonraki koşuda doğrudan normal halt'a girer.\n"
-            "       Sıfırdan başlamasını istiyorsanız --peak-sifirla ekleyin."
-        )
-
-    state.stopped = False
-    state.stop_reason = None
-    state.halted = False
-    state.halted_since = None
-    state.halted_marks = 0
-    state.halt_resets = 0
-    if args.sermaye_sifirla:
-        state.starting_capital = equity
-    if args.peak_sifirla:
-        state.peak_equity = equity
     save_state(state)
 
     stamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

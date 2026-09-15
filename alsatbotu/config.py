@@ -24,6 +24,12 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 DATA_DIR = Path(os.environ.get("ALSATBOTU_DATA_DIR", Path(__file__).resolve().parent.parent / "data"))
 PORTFOLIO_STATE_PATH = DATA_DIR / "portfolio.json"
 SIGNALS_LEDGER_PATH = DATA_DIR / "signals.jsonl"
+# scripts/process_telegram_controls.py'nin kendi getUpdates offset'i --
+# evaluation.db'deki telegram_offset tablosundan (strateji onay akışı)
+# bilerek ayrı: iki bağımsız kısa-poll tüketicisi, her biri kendi high-water
+# mark'ını tutar, callback_data önekine göre ilgilenmediği güncellemeleri
+# atlar ama yine de offset'ini onların da ötesine taşır.
+TELEGRAM_CONTROL_OFFSET_PATH = DATA_DIR / "telegram_control_offset.json"
 
 # -- Sermaye ve vade ----------------------------------------------------
 # SERMAYE: paper portföyün başlangıç sermayesi. Bir state dosyası varsa o
@@ -163,6 +169,24 @@ SYMBOL_CATEGORIES: dict[str, str] = {
     "KO": "consumer",
 }
 
+# Forex çiftleri: "forex" kategorisi altında toplanır, böylece risk motorunun
+# CATEGORY_EXPOSURE_LIMIT_PCT'i bunları hisse senedi kategorilerinden bağımsız
+# kendi başına bir grup olarak sınırlar. TwelveData bu sembolleri "EUR/USD"
+# formatında destekliyor (alsatbotu/data/twelvedata.py zaten kaynak-agnostik).
+# Şimdilik yalnızca paper trading -- gerçek bir forex broker/lot/pip/kaldıraç
+# mantığı yok, mevcut cash-based pozisyon boyutlandırması (fiyat*miktar)
+# hisse senedi sembolleriyle aynı şekilde uygulanıyor.
+FOREX_SYMBOLS: dict[str, str] = {
+    "EUR/USD": "forex",
+    "GBP/USD": "forex",
+    "USD/JPY": "forex",
+    "USD/CHF": "forex",
+    "AUD/USD": "forex",
+    "USD/TRY": "forex",
+}
+
+SYMBOL_CATEGORIES.update(FOREX_SYMBOLS)
+
 # The default watchlist the portfolio runner evaluates each time it runs.
 WATCHLIST: list[dict] = [
     {"symbol": symbol, "category": category, "source": "twelvedata"}
@@ -181,8 +205,17 @@ def source_for(symbol: str, default: str = "coingecko") -> str:
     return SYMBOL_SOURCES.get(symbol, default)
 
 
-def asset_type_for(source: str) -> str:
-    return "crypto" if source == "coingecko" else "stock"
+def asset_type_for(source: str, category: str | None = None) -> str:
+    """"stock"/"crypto"/"forex" sınıflandırması.
+
+    Kaynak "coingecko" ise sonuç tartışmasız "crypto" (bu kaynak yalnızca
+    kripto için kullanılıyor). Aksi halde kaynak "twelvedata" hem hisse hem
+    forex için kullanıldığından ikisini ayırt edemez -- kategori bilgisi
+    (WATCHLIST entry'sindeki "category") burada devreye girer.
+    """
+    if source == "coingecko":
+        return "crypto"
+    return "forex" if category == "forex" else "stock"
 
 
 # -- Evaluation / paper-trading loop ------------------------------------

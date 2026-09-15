@@ -366,6 +366,8 @@ def run(days: int = 60) -> None:
     elif state.halted:
         print(f"DURUM: drawdown halt aktif ({state.halted_marks} işaretlemedir), "
               f"yeni ALIM yok. Reset hakkı: {state.halt_resets}/{MAX_HALT_RESETS}")
+    if state.paused:
+        print(f"DURUM: bot Telegram'dan manuel duraklatıldı ({state.paused_reason}), yeni ALIM yok.")
     print(f"Open positions: {len(state.open_positions)}")
     for symbol, position in state.open_positions.items():
         print(

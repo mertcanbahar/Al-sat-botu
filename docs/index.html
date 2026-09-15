@@ -138,16 +138,6 @@
     cursor: pointer;
   }
   #tabs button.active { color: var(--gold); border-color: var(--gold); }
-  #tab-inactive-msg {
-    display: none;
-    text-align: center;
-    color: var(--muted);
-    padding: 30px 10px;
-    border: 1px dashed var(--line-2);
-    border-radius: 6px;
-    margin-bottom: 10px;
-    font-size: 0.85rem;
-  }
 
   /* ---------- Layout grid ---------- */
   #app {
@@ -427,7 +417,6 @@
   <button type="button" data-tab="forex">Forex</button>
   <button type="button" data-tab="kripto">Kripto</button>
 </nav>
-<div id="tab-inactive-msg">Bu varlık sınıfı henüz aktif değil.</div>
 
 <main id="app">
 
@@ -529,6 +518,14 @@
     { key: "finans-enerji", label: "Finans / Enerji", cats: ["financials", "energy"] },
     { key: "tuketim", label: "Tüketim", cats: ["consumer"] },
   ];
+
+  // "Borsa" sekmesi kalan her kategoriyi kapsar (tech/financials/.../other);
+  // forex ve kripto kendi kategorileriyle ayrı sekmelerde gösterilir.
+  function tabMatches(category, tab) {
+    if (tab === "forex") return category === "forex";
+    if (tab === "kripto") return category === "crypto";
+    return category !== "forex" && category !== "crypto";
+  }
 
   const fmtNum = (n, digits = 2) =>
     typeof n === "number" && isFinite(n)
@@ -778,6 +775,8 @@
 
   let selectedSymbol = null;
   let onSymbolSelect = () => {};
+  let currentTab = "borsa";
+  let latest = { watchlist: [], portfolio: null, signals: [], health: { ok: false }, equity: { rows: [] } };
 
   // Three orbits, matching the three static wireframe ellipses below --
   // each spins as a rigid group (CSS animation, no JS loop), own speed and
@@ -1278,22 +1277,82 @@
 
   function setupTabs() {
     const buttons = document.querySelectorAll("#tabs button");
-    const app = document.getElementById("app");
-    const inactiveMsg = document.getElementById("tab-inactive-msg");
     buttons.forEach((btn) => {
       btn.addEventListener("click", () => {
         buttons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        const tab = btn.getAttribute("data-tab");
-        if (tab === "borsa") {
-          app.style.display = "";
-          inactiveMsg.style.display = "none";
-        } else {
-          app.style.display = "none";
-          inactiveMsg.style.display = "block";
-        }
+        currentTab = btn.getAttribute("data-tab");
+        selectedSymbol = null; // önceki sekmenin sembolü yeni sekmede olmayabilir
+        renderTab(currentTab);
       });
     });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Sekme render: aktif sekmenin sembollerine göre filtrelenmiş görünüm */
+  /* ------------------------------------------------------------------ */
+  //
+  // Fiyat/sinyal/grafik gibi sembol bazlı paneller seçili sekmeye göre
+  // filtrelenir. Nakit/pozisyon değeri/drawdown/halt gibi portföy geneli
+  // panellar (risk, metrik, footer, equity, ring) HER ZAMAN tüm portföyü
+  // gösterir -- tek bir ortak nakit havuzu ve tek bir halt mekanizması var,
+  // varlık sınıfına göre bölünmüyor (bkz. alsatbotu/config.py, engine/risk.py).
+  // Sektör panelleri (sector/sectorcols) yalnızca borsa kategorileri için
+  // anlamlı, forex/kripto sekmelerinde gizlenir.
+
+  function renderTab(tab) {
+    const { watchlist, portfolio, signals, health, equity } = latest;
+    const symbolState = buildSymbolState(watchlist, signals, portfolio);
+
+    const tabWatchlist = watchlist.filter((w) => tabMatches(w.category, tab));
+    const tabSymbolState = {};
+    for (const symbol of Object.keys(symbolState)) {
+      if (tabMatches(symbolState[symbol].category, tab)) tabSymbolState[symbol] = symbolState[symbol];
+    }
+    const tabSignals = signals.filter((s) => s && s.symbol && tabMatches((symbolState[s.symbol] || {}).category || "other", tab));
+    const tabSymbols = new Set(Object.keys(tabSymbolState));
+    const tabPortfolio = portfolio
+      ? {
+          ...portfolio,
+          open_positions: Object.fromEntries(
+            Object.entries(portfolio.open_positions || {}).filter(([symbol]) => tabSymbols.has(symbol))
+          ),
+        }
+      : portfolio;
+
+    document.getElementById("sector").style.display = tab === "borsa" ? "" : "none";
+    document.getElementById("sectorcols").style.display = tab === "borsa" ? "" : "none";
+
+    renderPriceGrid(document.getElementById("pricegrid-body"), tabSymbolState, tabWatchlist);
+    if (tab === "borsa") {
+      renderSector(document.getElementById("sector-body"), tabSymbolState);
+      renderSectorColumns(document.getElementById("sectorcols-body"), tabSymbolState);
+    }
+    renderSphere(document.getElementById("sphere-body"), tabSymbolState, tabWatchlist, portfolio);
+    renderSignalPanel(document.getElementById("signal-body"), tabSignals, portfolio);
+    renderHeatmap(document.getElementById("heatmap-body"), tabSymbolState, tabWatchlist);
+    renderLastSignals(document.getElementById("lastsignals-body"), tabSignals);
+    renderPortfolioRing(document.getElementById("portfolioring-body"), portfolio);
+    renderEquity(document.getElementById("equity-body"), buildEquitySeries(portfolio, equity.rows));
+    renderPositions(document.getElementById("positions-body"), tabPortfolio, tabSymbolState);
+    renderRisk(document.getElementById("risk-body"), portfolio);
+    renderSystem(document.getElementById("system-body"), health);
+    renderMetrics(document.getElementById("metrics-body"), portfolio, signals);
+    renderFooterSummary(portfolio, signals, health);
+
+    onSymbolSelect = (symbol) => {
+      selectedSymbol = symbol;
+      renderChart(symbol, tabSymbolState);
+    };
+
+    if (!selectedSymbol || !tabSymbolState[selectedSymbol]) {
+      const withHistory = Object.values(tabSymbolState).find((e) => e.history.length);
+      selectedSymbol = withHistory ? withHistory.symbol : (tabWatchlist[0] && tabWatchlist[0].symbol) || null;
+    }
+    renderChart(selectedSymbol, tabSymbolState);
+
+    const lastRunTime = health.ok && health.data && health.data.timestamp ? fmtDate(health.data.timestamp) : fmtDate(new Date().toISOString());
+    document.getElementById("last-run").textContent = `Son çalıştırma: ${lastRunTime}`;
   }
 
   /* ------------------------------------------------------------------ */
@@ -1309,38 +1368,15 @@
       loadEquity(),
     ]);
 
-    const portfolio = portfolioResult.ok ? portfolioResult.data : null;
-    const signals = signalsResult.signals || [];
-    const symbolState = buildSymbolState(watchlist, signals, portfolio);
-
-    renderPriceGrid(document.getElementById("pricegrid-body"), symbolState, watchlist);
-    renderSector(document.getElementById("sector-body"), symbolState);
-    renderSectorColumns(document.getElementById("sectorcols-body"), symbolState);
-    renderSphere(document.getElementById("sphere-body"), symbolState, watchlist, portfolio);
-    renderSignalPanel(document.getElementById("signal-body"), signals, portfolio);
-    renderHeatmap(document.getElementById("heatmap-body"), symbolState, watchlist);
-    renderLastSignals(document.getElementById("lastsignals-body"), signals);
-    renderPortfolioRing(document.getElementById("portfolioring-body"), portfolio);
-    renderEquity(document.getElementById("equity-body"), buildEquitySeries(portfolio, equity.rows));
-    renderPositions(document.getElementById("positions-body"), portfolio, symbolState);
-    renderRisk(document.getElementById("risk-body"), portfolio);
-    renderSystem(document.getElementById("system-body"), health);
-    renderMetrics(document.getElementById("metrics-body"), portfolio, signals);
-    renderFooterSummary(portfolio, signals, health);
-
-    onSymbolSelect = (symbol) => {
-      selectedSymbol = symbol;
-      renderChart(symbol, symbolState);
+    latest = {
+      watchlist,
+      portfolio: portfolioResult.ok ? portfolioResult.data : null,
+      signals: signalsResult.signals || [],
+      health,
+      equity,
     };
 
-    if (!selectedSymbol) {
-      const withHistory = Object.values(symbolState).find((e) => e.history.length);
-      selectedSymbol = withHistory ? withHistory.symbol : (watchlist[0] && watchlist[0].symbol) || null;
-    }
-    renderChart(selectedSymbol, symbolState);
-
-    const lastRunTime = health.ok && health.data && health.data.timestamp ? fmtDate(health.data.timestamp) : fmtDate(new Date().toISOString());
-    document.getElementById("last-run").textContent = `Son çalıştırma: ${lastRunTime}`;
+    renderTab(currentTab);
   }
 
   setupTabs();
