@@ -1,6 +1,19 @@
 {
-  "cash": 4.547473508864641e-13,
-  "closed_trades": [],
+  "cash": 2885.576033318815,
+  "closed_trades": [
+    {
+      "category": "tech",
+      "entry_date": "2026-09-04T00:00:00+00:00",
+      "entry_price": 230.36,
+      "exit_date": "2026-09-15T00:00:00+00:00",
+      "exit_price": 212.17,
+      "pnl": -247.38948977739255,
+      "pnl_pct": -0.07896336169473883,
+      "quantity": 13.60030180194568,
+      "reason": "stop_loss",
+      "symbol": "NVDA"
+    }
+  ],
   "halt_resets": 0,
   "halted": false,
   "halted_marks": 0,
@@ -13,14 +26,6 @@
       "quantity": 32.554041976879674,
       "stop_price": 85.18309356847575,
       "symbol": "KO"
-    },
-    "NVDA": {
-      "category": "tech",
-      "entry_date": "2026-09-04T00:00:00+00:00",
-      "entry_price": 230.36,
-      "quantity": 13.60030180194568,
-      "stop_price": 215.65444398275136,
-      "symbol": "NVDA"
     },
     "XOM": {
       "category": "energy",
