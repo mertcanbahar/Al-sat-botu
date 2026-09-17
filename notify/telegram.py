@@ -47,8 +47,15 @@ def _redact(text: str) -> str:
     return text
 
 
-def _call(method: str, payload: dict) -> Optional[dict]:
-    """POST to the Bot API. Returns the parsed `result` field, or None on any failure."""
+def _call(method: str, payload: dict, http_timeout: Optional[float] = None) -> Optional[dict]:
+    """POST to the Bot API. Returns the parsed `result` field, or None on any failure.
+
+    `http_timeout` overrides the HTTP client's own timeout (default
+    `config.REQUEST_TIMEOUT_SECONDS`) -- needed for `get_updates`'s
+    long-poll callers, where Telegram is told to hold the connection open
+    for up to `payload["timeout"]` seconds: the HTTP timeout must exceed
+    that or `requests` aborts the connection before Telegram ever responds.
+    """
     if not is_configured():
         logger.warning(
             "Telegram is not configured (TELEGRAM_TOKEN / TELEGRAM_CHAT_ID missing); "
@@ -59,7 +66,9 @@ def _call(method: str, payload: dict) -> Optional[dict]:
 
     url = f"{config.TELEGRAM_BASE_URL}/bot{config.TELEGRAM_TOKEN}/{method}"
     try:
-        response = requests.post(url, json=payload, timeout=config.REQUEST_TIMEOUT_SECONDS)
+        response = requests.post(
+            url, json=payload, timeout=http_timeout or config.REQUEST_TIMEOUT_SECONDS
+        )
     except requests.RequestException as exc:
         logger.error("Telegram %s failed: %s", method, _redact(str(exc)))
         return None
@@ -132,7 +141,14 @@ def get_updates(
     timeout: int = 0,
     allowed_updates: Optional[list[str]] = None,
 ) -> list[dict]:
-    """Fetch pending updates (short poll -- meant to be called from a cron job, not a daemon).
+    """Fetch pending updates.
+
+    `timeout=0` (the default) is a short poll -- meant to be called from a
+    cron job (`scripts/process_telegram_controls.py` via GitHub Actions).
+    `timeout > 0` is a real Telegram long-poll -- meant for a persistent
+    caller (`scripts/telegram_control_daemon.py`); the HTTP client's own
+    timeout is padded 5s past Telegram's so the connection outlives the
+    long-poll instead of aborting it.
 
     `offset` should be the last-processed update_id + 1, so Telegram
     doesn't redeliver updates the caller already handled. Returns an
@@ -145,5 +161,6 @@ def get_updates(
     payload: dict = {"timeout": timeout, "allowed_updates": allowed_updates or ["callback_query"]}
     if offset is not None:
         payload["offset"] = offset
-    result = _call("getUpdates", payload)
+    http_timeout = timeout + 5 if timeout > 0 else None
+    result = _call("getUpdates", payload, http_timeout=http_timeout)
     return result if result is not None else []

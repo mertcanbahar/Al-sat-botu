@@ -86,17 +86,20 @@ def evaluate_versioned(rows: Sequence[dict], params: StrategyParams) -> Decision
 
     trend_ok = ema_20 is not None and ema_50 is not None and ema_20 > ema_50
     rsi_ok = rsi_value is not None and params.rsi_buy_min <= rsi_value <= params.rsi_buy_max
-    volume_ok = volume is not None and volume_avg is not None and volume > volume_avg
+    # bkz. alsatbotu.signal._evaluate_row -- forex (Twelve Data) hiç volume
+    # döndürmez; veri yokken filtreyi geçmiş say, "hep başarısız" yapma.
+    volume_ok = volume is None or volume_avg is None or volume > volume_avg
 
     if trend_ok and rsi_ok and volume_ok:
-        return Decision(
-            signal=Signal.BUY,
-            reasons=[
-                f"EMA20 {ema_20:.4f} > EMA50 {ema_50:.4f}",
-                f"RSI {rsi_value:.1f} in [{params.rsi_buy_min}, {params.rsi_buy_max}]",
-                f"Volume {volume:.4f} > 20-period average {volume_avg:.4f}",
-            ],
-        )
+        reasons = [
+            f"EMA20 {ema_20:.4f} > EMA50 {ema_50:.4f}",
+            f"RSI {rsi_value:.1f} in [{params.rsi_buy_min}, {params.rsi_buy_max}]",
+        ]
+        if volume is not None and volume_avg is not None:
+            reasons.append(f"Volume {volume:.4f} > 20-period average {volume_avg:.4f}")
+        else:
+            reasons.append("Volume data unavailable for this symbol; confirmation skipped")
+        return Decision(signal=Signal.BUY, reasons=reasons)
 
     return Decision(signal=Signal.HOLD)
 

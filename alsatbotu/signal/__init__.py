@@ -4,7 +4,13 @@ Uses a fast/slow EMA pair (periods from the VADE profile -- 20/50 on "uzun",
 10/30 on "kisa"), RSI(14), ATR(14) and a 20-period volume average:
 
 AL (BUY)  -- all of: EMA20 > EMA50, RSI in [40, 75], last volume > 20-period
-             volume average.
+             volume average -- *when volume data exists*. Twelve Data's forex
+             time_series has no "volume" field at all (OTC market, no
+             centralized tape), so for those symbols this leg is skipped
+             (treated as confirmed) rather than treated as "zero volume,
+             always fails" -- the latter would make forex permanently
+             unable to BUY. Stocks and crypto, which do have volume data,
+             are unaffected.
 SAT (SELL) -- any of: price below the ATR stop level, EMA20 < EMA50,
              RSI > 75.
 
@@ -81,17 +87,25 @@ def _evaluate_row(prev: dict, last: dict) -> Decision:
 
     trend_ok = ema_20 is not None and ema_50 is not None and ema_20 > ema_50
     rsi_ok = rsi_value is not None and RSI_BUY_MIN <= rsi_value <= RSI_BUY_MAX
-    volume_ok = volume is not None and volume_avg is not None and volume > volume_avg
+    # Hacim, veri kaynağı hiç sağlamıyorsa (forex: Twelve Data'nın FX
+    # time_series'inde "volume" alanı yok -- OTC piyasada merkezi bir hacim
+    # kaydı olmadığı için) teyit olarak DEĞERLENDİRİLEMEZ; bu, hacmin düşük
+    # olduğu anlamına gelmez. Filtreyi "veri yoksa reddet"e çevirmek forex'i
+    # sonsuza dek AL sinyalinden mahrum bırakırdı (volume hep None -> volume_ok
+    # hep False). Yalnızca veri VARKEN ("has_volume" -- add_indicators'ta tüm
+    # satırlar dolu olduğunda hesaplanır) gerçek bir eşik olarak uygulanır.
+    volume_ok = volume is None or volume_avg is None or volume > volume_avg
 
     if trend_ok and rsi_ok and volume_ok:
-        return Decision(
-            signal=Signal.BUY,
-            reasons=[
-                f"EMA{EMA_FAST_PERIOD} {ema_20:.4f} > EMA{EMA_SLOW_PERIOD} {ema_50:.4f}",
-                f"RSI {rsi_value:.1f} in [{RSI_BUY_MIN}, {RSI_BUY_MAX}]",
-                f"Volume {volume:.4f} > 20-period average {volume_avg:.4f}",
-            ],
-        )
+        reasons = [
+            f"EMA{EMA_FAST_PERIOD} {ema_20:.4f} > EMA{EMA_SLOW_PERIOD} {ema_50:.4f}",
+            f"RSI {rsi_value:.1f} in [{RSI_BUY_MIN}, {RSI_BUY_MAX}]",
+        ]
+        if volume is not None and volume_avg is not None:
+            reasons.append(f"Volume {volume:.4f} > 20-period average {volume_avg:.4f}")
+        else:
+            reasons.append("Volume data unavailable for this symbol; confirmation skipped")
+        return Decision(signal=Signal.BUY, reasons=reasons)
 
     return Decision(signal=Signal.HOLD)
 

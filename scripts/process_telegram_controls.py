@@ -158,10 +158,15 @@ def _handle_message(message: dict) -> None:
     send_message_with_keyboard("🎛 Kontrol paneli:\n\n" + _status_text(), CONTROL_KEYBOARD)
 
 
-def process_updates() -> int:
-    """Process every pending update. Returns the number of control actions applied."""
+def process_updates(timeout: int = 0) -> int:
+    """Process every pending update. Returns the number of control actions applied.
+
+    `timeout` is passed straight through to `get_updates` -- 0 (default) is
+    the short poll this cron script itself uses; `scripts/telegram_control_daemon.py`
+    calls this same function with a real long-poll timeout instead.
+    """
     offset = _get_offset()
-    updates = get_updates(offset=offset, allowed_updates=["callback_query", "message"])
+    updates = get_updates(offset=offset, timeout=timeout, allowed_updates=["callback_query", "message"])
     handled = 0
 
     for update in updates:
