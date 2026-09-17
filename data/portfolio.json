@@ -36,8 +36,8 @@
       "symbol": "XOM"
     }
   },
-  "paused": true,
-  "paused_reason": "Telegram",
+  "paused": false,
+  "paused_reason": null,
   "peak_equity": 10028.409478530735,
   "starting_capital": 10000.0,
   "stop_reason": null,
