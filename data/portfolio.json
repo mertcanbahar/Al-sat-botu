@@ -1,5 +1,5 @@
 {
-  "cash": 2885.576033318815,
+  "cash": 0.0,
   "closed_trades": [
     {
       "category": "tech",
@@ -19,6 +19,14 @@
   "halted_marks": 0,
   "halted_since": null,
   "open_positions": {
+    "JPM": {
+      "category": "financials",
+      "entry_date": "2026-09-17T00:00:00+00:00",
+      "entry_price": 349.31,
+      "quantity": 4.187946455965736,
+      "stop_price": 328.5479768150585,
+      "symbol": "JPM"
+    },
     "KO": {
       "category": "consumer",
       "entry_date": "2026-09-04T00:00:00+00:00",
@@ -26,6 +34,14 @@
       "quantity": 32.554041976879674,
       "stop_price": 85.18309356847575,
       "symbol": "KO"
+    },
+    "USD/CHF": {
+      "category": "forex",
+      "entry_date": "2026-09-18T00:00:00+00:00",
+      "entry_price": 0.825,
+      "quantity": 1724.4660082247563,
+      "stop_price": 0.8128259337892872,
+      "symbol": "USD/CHF"
     },
     "XOM": {
       "category": "energy",
