@@ -1,5 +1,5 @@
 {
-  "cash": 0.0,
+  "cash": 1417.8711521317593,
   "closed_trades": [
     {
       "category": "tech",
@@ -12,6 +12,18 @@
       "quantity": 13.60030180194568,
       "reason": "stop_loss",
       "symbol": "NVDA"
+    },
+    {
+      "category": "financials",
+      "entry_date": "2026-09-17T00:00:00+00:00",
+      "entry_price": 349.31,
+      "exit_date": "2026-09-24T00:00:00+00:00",
+      "exit_price": 338.56,
+      "pnl": -45.02042440163177,
+      "pnl_pct": -0.030774956342503823,
+      "quantity": 4.187946455965736,
+      "reason": "EMA20 349.6227 < EMA50 350.1134",
+      "symbol": "JPM"
     }
   ],
   "halt_resets": 0,
@@ -19,14 +31,6 @@
   "halted_marks": 0,
   "halted_since": null,
   "open_positions": {
-    "JPM": {
-      "category": "financials",
-      "entry_date": "2026-09-17T00:00:00+00:00",
-      "entry_price": 349.31,
-      "quantity": 4.187946455965736,
-      "stop_price": 328.5479768150585,
-      "symbol": "JPM"
-    },
     "KO": {
       "category": "consumer",
       "entry_date": "2026-09-04T00:00:00+00:00",
