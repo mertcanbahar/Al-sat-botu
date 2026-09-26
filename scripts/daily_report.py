@@ -157,7 +157,14 @@ def _warnings(state: PortfolioState, current_prices: dict[str, float], equity: f
 
     for symbol, position in state.open_positions.items():
         price = current_prices.get(symbol)
-        if price is not None and price <= position.stop_price:
+        if price is None:
+            # Fiyatsız pozisyonda stop uyarısı da çıkamaz; bunu sessiz geçmek
+            # "stop'tan uzak" demekle aynı görünür, o yüzden açıkça yazılır.
+            warnings.append(
+                f"{symbol} fiyatı alınamadı — stop ({position.stop_price:.4f}) "
+                "kontrol edilemedi, değer giriş fiyatıyla gösteriliyor"
+            )
+        elif price <= position.stop_price:
             warnings.append(
                 f"{symbol} fiyatı {price:.4f}, stop seviyesi {position.stop_price:.4f} "
                 "altında — pozisyon sonraki koşuda stop'la kapatılacak"
@@ -194,7 +201,14 @@ def build_report(
 
     if state.open_positions:
         for symbol, position in state.open_positions.items():
-            price = current_prices.get(symbol, position.entry_price)
+            if symbol not in current_prices:
+                lines.append(
+                    f"  • {symbol} ({position.category}): {position.quantity:.6f} adet, "
+                    f"giriş {position.entry_price:.4f} → fiyat alınamadı, "
+                    f"stop {position.stop_price:.4f}"
+                )
+                continue
+            price = current_prices[symbol]
             change = (price / position.entry_price - 1.0) if position.entry_price else 0.0
             lines.append(
                 f"  • {symbol} ({position.category}): {position.quantity:.6f} adet, "

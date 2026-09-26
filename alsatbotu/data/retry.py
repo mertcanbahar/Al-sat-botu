@@ -28,6 +28,8 @@ def request_with_retry(
     max_retries: int = DEFAULT_MAX_RETRIES,
     backoff_base_seconds: float = DEFAULT_BACKOFF_BASE_SECONDS,
     should_retry_response=None,
+    before_attempt=None,
+    min_retry_delay_seconds: float = 0.0,
     **kwargs,
 ) -> requests.Response:
     """Perform an HTTP request, retrying transient failures with backoff.
@@ -38,12 +40,20 @@ def request_with_retry(
     like Twelve Data that report rate limiting as HTTP 200 with an
     in-body error code rather than a 429 status.
 
+    `before_attempt()` is called before every attempt (retries included) --
+    used for client-side throttling, so a retry can't itself blow through a
+    per-minute quota. `min_retry_delay_seconds` is a floor under the delay
+    after a retryable *response*: a per-minute quota isn't going to reset
+    within the default 1-4s exponential backoff.
+
     Raises the last exception, or the last response's `raise_for_status()`
     error, once `max_retries` is exhausted.
     """
     last_exc: Exception | None = None
 
     for attempt in range(max_retries + 1):
+        if before_attempt is not None:
+            before_attempt()
         try:
             response = requests.request(method, url, **kwargs)
         except (requests.ConnectionError, requests.Timeout) as exc:
@@ -68,7 +78,10 @@ def request_with_retry(
             response.raise_for_status()
             return response
 
-        delay = _retry_after_delay(response) or _backoff_delay(attempt, backoff_base_seconds)
+        delay = max(
+            _retry_after_delay(response) or _backoff_delay(attempt, backoff_base_seconds),
+            min_retry_delay_seconds,
+        )
         logger.warning(
             "%s %s returned %d; retrying in %.1fs (attempt %d/%d)",
             method, url, response.status_code, delay, attempt + 1, max_retries,

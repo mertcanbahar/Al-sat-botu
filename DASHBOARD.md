@@ -130,10 +130,15 @@ Sağlık dosyası şu yapıda olsun ve `run_portfolio.py` her çalıştırmada y
     {"name": "hacim", "status": "warn", "code": "W118", "detail": "7/10"},
     {"name": "kural", "status": "ok", "detail": "3 sinyal"},
     {"name": "portfoy", "status": "ok", "detail": "2 pozisyon"},
+    {"name": "stop", "status": "warn", "code": "W-STOP", "detail": "kontrol edilemedi: KO"},
     {"name": "telegram", "status": "ok", "detail": "gonderildi"}
   ]
 }
 ```
+
+`stop` modülü, açık pozisyonu olup bu koşuda fiyatı alınamayan sembolleri
+listeler (`W-STOP`). Bu sembollerin stop'u o koşuda kontrol edilemez; aynı
+uyarı Telegram'a da gönderilir.
 
 Panelde her modül bir satır: nokta (yeşil ok / turuncu warn / kırmızı error),
 modül adı, detay. Hata varsa kodu da yazılır.

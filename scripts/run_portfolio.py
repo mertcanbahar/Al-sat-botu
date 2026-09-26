@@ -90,6 +90,7 @@ def _write_health(
     open_positions: int,
     telegram_attempts: int,
     telegram_successes: int,
+    unpriced_positions: Optional[dict[str, str]] = None,
 ) -> None:
     fetch_status = _module_status(fetch_ok, total_symbols)
     volume_status = _module_status(volume_ok, fetch_ok)
@@ -129,6 +130,7 @@ def _write_health(
             ),
             _module("kural", "ok", f"{signal_count} sinyal"),
             _module("portfoy", "ok", f"{open_positions} pozisyon"),
+            _stop_module(unpriced_positions or {}),
             _module("telegram", telegram_status, telegram_detail, telegram_code),
         ],
     }
@@ -141,12 +143,56 @@ def _write_health(
     os.replace(tmp_path, path)
 
 
+def _stop_module(unpriced_positions: dict[str, str]) -> dict:
+    """Stop kontrolünün kapsamı: fiyatı gelmeyen açık pozisyon var mı?"""
+    if not unpriced_positions:
+        return {"name": "stop", "status": "ok", "detail": "tüm açık pozisyonlar kontrol edildi"}
+    return {
+        "name": "stop",
+        "status": "warn",
+        "detail": f"kontrol edilemedi: {', '.join(unpriced_positions)}",
+        "code": "W-STOP",
+    }
+
+
+def _order_for_fetch(watchlist: list[dict], held: set[str]) -> list[dict]:
+    """Açık pozisyonu olan semboller önce çekilir.
+
+    API kotası koşunun ortasında biterse fiyatsız kalan, stop'u izlenmeyen
+    bir pozisyon değil, yalnızca yeni sinyal bakılamayan bir sembol olsun.
+    Sıralama kararlı: grupların kendi içindeki sırası izleme listesindeki gibi.
+    """
+    return sorted(watchlist, key=lambda entry: entry["symbol"] not in held)
+
+
+def _unpriced_warning(unpriced_positions: dict[str, str], state) -> str:
+    lines = ["⚠️ Stop kontrolü yapılamadı — açık pozisyonun fiyatı alınamadı"]
+    for symbol, reason in unpriced_positions.items():
+        position = state.open_positions[symbol]
+        lines.append(
+            f"  • {symbol} (stop {position.stop_price:.4f}, giriş {position.entry_price:.4f}): {reason}"
+        )
+    lines.append(
+        "Bu koşuda bu pozisyonlar stop'la kapatılamaz; değerleme giriş fiyatıyla yapıldı."
+    )
+    return "\n".join(lines)
+
+
 def _append_equity(path: Path, equity: float, timestamp: Optional[str] = None) -> None:
     record = {"date": timestamp or datetime.now(timezone.utc).isoformat(), "value": equity}
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False))
         f.write("\n")
+
+
+def _short_error(exc: Exception) -> str:
+    """Telegram/panel için kısa hata metni; API anahtarını içeren URL'yi atar."""
+    response = getattr(exc, "response", None)
+    if response is not None and getattr(response, "status_code", None) == 429:
+        return "API hız limiti (HTTP 429)"
+    text = str(exc).split(" for url:")[0]
+    return text[:160]
 
 
 def _market_trend_ok(history: dict[str, list[dict]], window: int = TREND_SMA_WINDOW) -> Optional[bool]:
@@ -231,13 +277,15 @@ def run(days: int = 60) -> None:
     latest_by_symbol: dict[str, dict] = {}
     history_by_symbol: dict[str, list[dict]] = {}
 
+    fetch_errors: dict[str, str] = {}
+
     fetch_ok = 0
     volume_ok = 0
     signal_count = 0
     telegram_attempts = 0
     telegram_successes = 0
 
-    for entry in WATCHLIST:
+    for entry in _order_for_fetch(WATCHLIST, set(state.open_positions)):
         symbol = entry["symbol"]
         category = entry["category"]
         source = entry.get("source", "coingecko")
@@ -246,10 +294,12 @@ def run(days: int = 60) -> None:
             rows = get_price_history(symbol, source=source, days=days)
         except Exception as exc:  # noqa: BLE001 - one bad symbol shouldn't stop the run
             print(f"{symbol}: failed to fetch price history ({exc})")
+            fetch_errors[symbol] = _short_error(exc)
             continue
 
         if len(rows) < 2:
             print(f"{symbol}: not enough candles to evaluate ({len(rows)})")
+            fetch_errors[symbol] = f"yetersiz mum ({len(rows)})"
             continue
 
         history_by_symbol[symbol] = rows
@@ -325,6 +375,21 @@ def run(days: int = 60) -> None:
         else:
             print(f"{symbol}: HOLD @ {price:.4f}")
 
+    # Fiyatı gelmeyen açık pozisyonun stop'u bu koşuda kontrol edilemedi.
+    # Bu sessizce geçilmez: konsola, health.json'a ve Telegram'a yazılır.
+    # İzleme listesinden çıkarılmış ama hâlâ açık bir pozisyon da buraya düşer.
+    unpriced_positions = {
+        symbol: fetch_errors.get(symbol, "izleme listesinde değil, fiyatı çekilmedi")
+        for symbol in state.open_positions
+        if symbol not in current_prices
+    }
+    if unpriced_positions:
+        warning = _unpriced_warning(unpriced_positions, state)
+        print(warning)
+        telegram_attempts += 1
+        if send_message(warning):
+            telegram_successes += 1
+
     # Kategori kırpması alım/satımlardan sonra, equity işaretlemesinden önce:
     # halt bu koşunun nihai portföyünü görsün.
     _apply_category_trims(state, current_prices, datetime.now(timezone.utc).isoformat())
@@ -354,6 +419,7 @@ def run(days: int = 60) -> None:
         open_positions=len(state.open_positions),
         telegram_attempts=telegram_attempts,
         telegram_successes=telegram_successes,
+        unpriced_positions=unpriced_positions,
     )
     _append_equity(EQUITY_LEDGER_PATH, equity)
 

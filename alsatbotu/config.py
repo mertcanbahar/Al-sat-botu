@@ -12,6 +12,10 @@ CACHE_TTL_SECONDS = int(os.environ.get("ALSATBOTU_CACHE_TTL_SECONDS", "300"))
 COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3"
 TWELVEDATA_BASE_URL = "https://api.twelvedata.com"
 TWELVEDATA_API_KEY = os.environ.get("TWELVEDATA_API_KEY", "")
+# Twelve Data ücretsiz planı dakikada 8 istek kabul ediyor; fazlası HTTP 429
+# döner. İzleme listesi 16 sembol olduğu için istemci tarafında bu hıza
+# uyulmazsa listenin kuyruğu (WMT, KO, forex) her koşuda fiyatsız kalıyordu.
+TWELVEDATA_REQUESTS_PER_MINUTE = int(os.environ.get("ALSATBOTU_TWELVEDATA_RPM", "8"))
 
 REQUEST_TIMEOUT_SECONDS = 10
 

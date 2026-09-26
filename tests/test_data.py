@@ -35,6 +35,13 @@ def _no_sleep():
         yield
 
 
+@pytest.fixture(autouse=True)
+def _no_twelvedata_throttle(monkeypatch):
+    # Modül düzeyindeki limiter gerçek time.sleep kullanır ve testler
+    # arasında sayaç biriktirir; burada kota değil istemci davranışı sınanıyor.
+    monkeypatch.setattr(twelvedata, "_limiter", twelvedata.RateLimiter(0, 61.0))
+
+
 @pytest.fixture()
 def isolated_cache(tmp_path, monkeypatch):
     cache = DiskCache(cache_dir=tmp_path, ttl_seconds=300)
