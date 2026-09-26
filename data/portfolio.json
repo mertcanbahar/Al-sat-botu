@@ -1,5 +1,5 @@
 {
-  "cash": 1417.8711521317593,
+  "cash": 0.0,
   "closed_trades": [
     {
       "category": "tech",
@@ -38,6 +38,14 @@
       "quantity": 32.554041976879674,
       "stop_price": 85.18309356847575,
       "symbol": "KO"
+    },
+    "MSFT": {
+      "category": "tech",
+      "entry_date": "2026-09-25T00:00:00+00:00",
+      "entry_price": 516.16998,
+      "quantity": 2.7469074279208554,
+      "stop_price": 480.9414530560642,
+      "symbol": "MSFT"
     },
     "USD/CHF": {
       "category": "forex",
