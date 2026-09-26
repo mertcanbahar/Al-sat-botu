@@ -1,0 +1,73 @@
+{
+  "cash": 0.0,
+  "closed_trades": [
+    {
+      "category": "tech",
+      "entry_date": "2026-09-04T00:00:00+00:00",
+      "entry_price": 230.36,
+      "exit_date": "2026-09-15T00:00:00+00:00",
+      "exit_price": 212.17,
+      "pnl": -247.38948977739255,
+      "pnl_pct": -0.07896336169473883,
+      "quantity": 13.60030180194568,
+      "reason": "stop_loss",
+      "symbol": "NVDA"
+    },
+    {
+      "category": "financials",
+      "entry_date": "2026-09-17T00:00:00+00:00",
+      "entry_price": 349.31,
+      "exit_date": "2026-09-24T00:00:00+00:00",
+      "exit_price": 338.56,
+      "pnl": -45.02042440163177,
+      "pnl_pct": -0.030774956342503823,
+      "quantity": 4.187946455965736,
+      "reason": "EMA20 349.6227 < EMA50 350.1134",
+      "symbol": "JPM"
+    }
+  ],
+  "halt_resets": 0,
+  "halted": false,
+  "halted_marks": 0,
+  "halted_since": null,
+  "open_positions": {
+    "KO": {
+      "category": "consumer",
+      "entry_date": "2026-09-04T00:00:00+00:00",
+      "entry_price": 88.07,
+      "quantity": 32.554041976879674,
+      "stop_price": 85.18309356847575,
+      "symbol": "KO"
+    },
+    "MSFT": {
+      "category": "tech",
+      "entry_date": "2026-09-25T00:00:00+00:00",
+      "entry_price": 516.16998,
+      "quantity": 2.7469074279208554,
+      "stop_price": 480.9414530560642,
+      "symbol": "MSFT"
+    },
+    "USD/CHF": {
+      "category": "forex",
+      "entry_date": "2026-09-18T00:00:00+00:00",
+      "entry_price": 0.825,
+      "quantity": 1724.4660082247563,
+      "stop_price": 0.8128259337892872,
+      "symbol": "USD/CHF"
+    },
+    "XOM": {
+      "category": "energy",
+      "entry_date": "2026-09-04T00:00:00+00:00",
+      "entry_price": 159.47,
+      "quantity": 25.08308772809933,
+      "stop_price": 152.68157520534717,
+      "symbol": "XOM"
+    }
+  },
+  "paused": false,
+  "paused_reason": null,
+  "peak_equity": 10028.409478530735,
+  "starting_capital": 10000.0,
+  "stop_reason": null,
+  "stopped": false
+}

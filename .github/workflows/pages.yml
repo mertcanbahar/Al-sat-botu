@@ -28,25 +28,12 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Generate docs/watchlist.json
-        run: |
-          python - <<'PY'
-          import json
-          from alsatbotu.config import WATCHLIST
-
-          data = [{"symbol": w["symbol"], "category": w["category"]} for w in WATCHLIST]
-          with open("docs/watchlist.json", "w", encoding="utf-8") as f:
-              json.dump(data, f, ensure_ascii=False, indent=2)
-              f.write("\n")
-          PY
-
-      - name: Sync portfolio data into docs/
-        run: |
-          mkdir -p docs/data
-          [ -f data/portfolio.json ] && cp data/portfolio.json docs/data/portfolio.json || true
-          [ -f data/signals.jsonl ] && cp data/signals.jsonl docs/data/signals.jsonl || true
-          [ -f data/health.json ] && cp data/health.json docs/data/health.json || true
-          [ -f data/equity.jsonl ] && cp data/equity.jsonl docs/data/equity.jsonl || true
+      # docs/ altındaki kopya artık repoda commit'li (Pages branch'ten
+      # yayımladığı için zorunlu). Burada yine de çalıştırılıyor: bir koşu
+      # docs/'u güncellemeyi atlamışsa bu deployment yine de taze veriyle
+      # çıkar. Tek uygulama, aynı betik.
+      - name: Sync dashboard data into docs/
+        run: python scripts/sync_docs_data.py
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

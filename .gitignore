@@ -220,10 +220,10 @@ __marimo__/
 # Al-sat-botu disk cache
 .cache/
 
-# GitHub Pages dashboard build output. Generated from data/ inside
-# .github/workflows/pages.yml at deploy time -- data/ is the single
-# source of truth, this is not a second manually-synced copy.
-docs/watchlist.json
-docs/data/*.json
-docs/data/*.jsonl
-!docs/data/.gitkeep
+# docs/watchlist.json ve docs/data/* BİLEREK izleniyor (ignore edilmiyor).
+# data/ hâlâ tek kaynak; docs/ altındaki kopya elle yazılmaz,
+# scripts/sync_docs_data.py üretir. Ama commit'lenmek zorunda: GitHub Pages
+# bu repoyu "Deploy from a branch" (main / docs) ile yayımlıyor, yani yalnızca
+# commit'li dosyalar yayına çıkıyor. Deploy anında üretmek yetmiyordu --
+# branch build'i o deployment'ın üstüne yazıyor ve panel her fetch'te 404
+# alıyordu.
