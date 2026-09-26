@@ -38,5 +38,29 @@
   {
     "symbol": "KO",
     "category": "consumer"
+  },
+  {
+    "symbol": "EUR/USD",
+    "category": "forex"
+  },
+  {
+    "symbol": "GBP/USD",
+    "category": "forex"
+  },
+  {
+    "symbol": "USD/JPY",
+    "category": "forex"
+  },
+  {
+    "symbol": "USD/CHF",
+    "category": "forex"
+  },
+  {
+    "symbol": "AUD/USD",
+    "category": "forex"
+  },
+  {
+    "symbol": "USD/TRY",
+    "category": "forex"
   }
 ]
