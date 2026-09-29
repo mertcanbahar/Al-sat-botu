@@ -140,6 +140,7 @@ def test_rapor_duman(tmp_path=None):
     for bolum in ("## 1.", "## 2.", "## 3.", "## 4.", "## 5.", "## 6.", "## 7."):
         assert bolum in metin
     assert "%3.0" in metin  # IEX/SIP hacim oranı 30k/1M
+    assert "Geçmiş SIP erişimi (bu plan): günlük bar **VAR**, dakikalık bar **VAR**, quote **VAR**" in metin
     assert "YANILTICI" in metin  # %5 eşiğinin altında -> açık uyarı
     assert "| 16:00–16:59 | 1 |" in metin  # 13:44 UTC = 16:44 TR
     assert (kok / "scanner_hits.csv").read_text().count("AAA") == 2

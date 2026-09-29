@@ -72,6 +72,13 @@ def rapor_uret(
           f"({len(seanslar)} seans, {sum(s.yarim_gun for s in seanslar)} yarım gün)")
     a(f"- Tarama akışı: **{tf.upper()}** | günlük/toplam hacim akışı: "
       f"**{ind.gunluk_feed.upper()}** | karşılaştırma akışı: **{(kf or 'yok').upper()}**")
+    istenen = (vcfg.get("karsilastirma_feed") or "").lower()
+    if istenen and istenen != tf:
+        durum = lambda ok: "**VAR**" if ok else "**YOK**"
+        a(f"- Geçmiş {istenen.upper()} erişimi (bu plan): günlük bar "
+          f"{durum(ind.gunluk_feed == istenen)}, dakikalık bar "
+          f"{durum(ind.karsilastirma_feed == istenen)}, quote "
+          f"{durum(ind.karsilastirma_feed == istenen and istenen not in erisimsiz_quote_feedleri)}")
     a(f"- API istek sayısı (bu koşu): {ind.istek_sayisi}")
     a("- Eşikler (`intraday/config.yaml`): " + ", ".join(
         f"{k}={tcfg[k]}" for k in ("fiyat_min", "fiyat_max", "min_gunluk_hacim",
