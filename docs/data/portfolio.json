@@ -1,5 +1,5 @@
 {
-  "cash": 0.0,
+  "cash": 1434.9109207837373,
   "closed_trades": [
     {
       "category": "tech",
@@ -24,6 +24,18 @@
       "quantity": 4.187946455965736,
       "reason": "EMA20 349.6227 < EMA50 350.1134",
       "symbol": "JPM"
+    },
+    {
+      "category": "forex",
+      "entry_date": "2026-09-18T00:00:00+00:00",
+      "entry_price": 0.825,
+      "exit_date": "2026-09-29T00:00:00+00:00",
+      "exit_price": 0.83209,
+      "pnl": 12.22646399831342,
+      "pnl_pct": 0.008593939393939376,
+      "quantity": 1724.4660082247563,
+      "reason": "RSI 76.0 > 75",
+      "symbol": "USD/CHF"
     }
   ],
   "halt_resets": 0,
@@ -46,14 +58,6 @@
       "quantity": 2.7469074279208554,
       "stop_price": 480.9414530560642,
       "symbol": "MSFT"
-    },
-    "USD/CHF": {
-      "category": "forex",
-      "entry_date": "2026-09-18T00:00:00+00:00",
-      "entry_price": 0.825,
-      "quantity": 1724.4660082247563,
-      "stop_price": 0.8128259337892872,
-      "symbol": "USD/CHF"
     },
     "XOM": {
       "category": "energy",
