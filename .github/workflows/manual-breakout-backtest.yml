@@ -1,0 +1,71 @@
+name: Breakout backtest on real data (arms A / B / C)
+
+# Kırılma mimarisinin gerçek Twelve Data geçmişiyle A/B/C karşılaştırması.
+# Yalnızca backtest: production kodu ve canlı workflow'lar değişmez.
+#
+# workflow_dispatch yalnızca dosya default branch'te olduğunda görünür.
+# Bu koşuyu main'e girmeden yapabilmek için branch'e push tetikleyicisi
+# (manual-crisis-real.yml ile aynı desen): yalnızca bu deneyin dosyaları
+# değiştiğinde ateşlenir; sonuç commit'i (backtest/results/breakout/)
+# tetikleyici yollarda olmadığı için döngü oluşmaz.
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Kaç yıllık günlük geçmiş"
+        required: false
+        default: "10"
+  push:
+    branches:
+      - ccr-b49c9376-2wl41y
+    paths:
+      - .github/workflows/manual-breakout-backtest.yml
+      - backtest/breakout_backtest.py
+      - tests/test_breakout_backtest.py
+
+permissions:
+  contents: write
+
+jobs:
+  breakout-backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ALSATBOTU_VADE: ${{ vars.ALSATBOTU_VADE || 'uzun' }}
+      TWELVEDATA_API_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Breakout unit tests (lookahead, stop/TP ordering, candidate lifecycle)
+        run: python -m pytest -q tests/test_breakout_backtest.py
+
+      - name: Run breakout backtest on real data
+        run: python backtest/breakout_backtest.py --years "${{ inputs.years || '10' }}" --out-dir backtest/results/breakout
+
+      - name: Commit and push results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backtest/results/breakout/summary.md backtest/results/breakout/results.json
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+            exit 0
+          fi
+          git commit -m "chore: update breakout backtest results (real data)"
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push reddedildi (deneme $attempt), rebase edip tekrar deneniyor..."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+          done
+          echo "::error::Sonuç 5 denemede push edilemedi."
+          exit 1

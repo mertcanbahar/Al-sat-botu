@@ -410,7 +410,9 @@ def new_trade(
     )
 
 
-def process_bar(t: OpenTrade, o: float, h: float, l: float) -> list[ExitOrder]:
+def process_bar(
+    t: OpenTrade, o: float, h: float, l: float, params: BreakoutParams = DEFAULT_PARAMS
+) -> list[ExitOrder]:
     """Bir barın gün içi çıkışlarını belirle (sıralama kuralı modül docstring'inde).
 
     `t.stop` ve `t.tp1_done` o barın BAŞINDAKİ durumdur; TP1 bu barda
@@ -429,8 +431,9 @@ def process_bar(t: OpenTrade, o: float, h: float, l: float) -> list[ExitOrder]:
     if t.arm != ARM_TP_SPLIT:
         raise ValueError(f"Bilinmeyen kol: {t.arm!r}")
 
+    breakeven = t.entry_price + params.breakeven_atr * t.atr_entry
     stop_reason = "initial_stop" if not t.tp1_done else (
-        "trail_stop" if stop > t.entry_price + 1e-12 and stop > t.initial_stop else "breakeven_stop"
+        "trail_stop" if stop > breakeven + 1e-9 else "breakeven_stop"
     )
 
     if not t.tp1_done:
@@ -700,7 +703,7 @@ def simulate_breakout(
             if symbol not in today:
                 continue
             row = rows_by_symbol[symbol][today[symbol]]
-            for order in process_bar(t, row["open"], row["high"], row["low"]):
+            for order in process_bar(t, row["open"], row["high"], row["low"], params):
                 apply_exit(t, order, d)
 
         # 3) Kapanışta işaretle, halt durum makinesini ilerlet.
