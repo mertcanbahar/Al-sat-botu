@@ -16,6 +16,12 @@ from backtest.breakout_backtest import (
     EVENT_REGISTERED,
     NO_HALT_POLICY,
     CandidateTracker,
+    TradeStat,
+    compute_arm_metrics,
+    copy_matches_original,
+    period_metrics,
+    simulate_current,
+    slice_curve,
     breakout_margin,
     breakout_ok,
     end_of_bar_update,
@@ -27,7 +33,7 @@ from backtest.breakout_backtest import (
     simulate_breakout,
     truncate_data,
 )
-from backtest.portfolio_backtest import generate_synthetic_data
+from backtest.portfolio_backtest import generate_synthetic_data, simulate
 
 P = DEFAULT_PARAMS
 
@@ -345,3 +351,91 @@ def test_no_halt_policy_never_halts():
     data = _data()
     sim = simulate_breakout(UNIVERSE[:1], data, 5_000.0, ARM_TP_SPLIT, halt_policy=NO_HALT_POLICY)
     assert all("halt" not in " ".join(r.reasons).lower() for r in sim.rejected)
+
+
+# --------------------------------------------------------------------------
+# C / C-stop
+# --------------------------------------------------------------------------
+
+def test_current_copy_matches_portfolio_backtest_simulate():
+    """Stop kapalıyken kopya, portfolio_backtest.simulate ile birebir aynı."""
+    data = _data()
+    original = simulate(UNIVERSE, data, 100_000.0)
+    copy = simulate_current(UNIVERSE, data, 100_000.0, enforce_stop=False)
+    assert original.trades
+    assert copy_matches_original(original, copy)
+
+
+def test_current_stop_exits_when_close_below_entry_stop():
+    data = _data()
+    sim = simulate_current(UNIVERSE, data, 100_000.0, enforce_stop=True)
+    stops = [t for t in sim.trades if t.reason.startswith("stop_loss")]
+    assert stops
+    for t in sim.trades:
+        assert t.risk_usd > 0 and t.stop_price < t.entry_price
+    rows = {s: {r["timestamp"].date().isoformat(): r for r in rs} for s, rs in data.items()}
+    for t in stops:
+        dates = sorted(d for d in rows[t.symbol] if d < t.exit_date[:10])
+        # Karar günü (çıkıştan önceki bar) kapanışı stop'un altında; dolum ertesi açılışta.
+        assert rows[t.symbol][dates[-1]]["close"] <= t.stop_price
+        assert close(t.exit_price, rows[t.symbol][t.exit_date[:10]]["open"] * (1 - 0.0005))
+
+
+def test_stopless_c_never_honours_entry_stop():
+    """Belgelenen bulgu: C, kapanış stop'un altındayken bile SELL sinyali gelmedikçe tutar."""
+    data = _data()
+    sim = simulate_current(UNIVERSE, data, 100_000.0, enforce_stop=False)
+    assert not any(t.reason.startswith("stop_loss") for t in sim.trades)
+
+
+# --------------------------------------------------------------------------
+# Exposure ve dönem dilimleri
+# --------------------------------------------------------------------------
+
+def test_exposure_metrics():
+    curve = [("2020-01-01", 100.0), ("2020-01-02", 110.0), ("2020-01-03", 121.0)]
+    exposure = [("2020-01-01", 0.0), ("2020-01-02", 0.5), ("2020-01-03", 1.0)]
+    m = compute_arm_metrics("X", curve, [], None, exposure)
+    assert close(m.avg_exposure, 0.5)
+    assert close(m.days_in_market, 2 / 3)
+    assert close(m.exposure_adj_cagr, m.cagr / 0.5)
+
+
+def test_exposure_recorded_for_all_sims_and_bounded():
+    data = _data()
+    sims = [
+        simulate_breakout(UNIVERSE, data, 100_000.0, ARM_TP_SPLIT),
+        simulate_current(UNIVERSE, data, 100_000.0, enforce_stop=True),
+    ]
+    for sim in sims:
+        assert len(sim.exposure) == len(sim.equity_curve)
+        assert all(0.0 <= v <= 1.0 + 1e-9 for _, v in sim.exposure)
+        assert any(v > 0 for _, v in sim.exposure)
+
+
+def test_slice_curve_uses_previous_close_as_base():
+    curve = [("2019-12-30", 100.0), ("2019-12-31", 100.0), ("2020-01-02", 110.0), ("2020-01-03", 121.0)]
+    assert slice_curve(curve, "2020-01-01", "9999-12-31") == [("2019-12-31", 100.0), ("2020-01-02", 110.0), ("2020-01-03", 121.0)]
+    assert slice_curve(curve, "0000-00-00", "2019-12-31") == curve[:2]
+
+
+def test_period_metrics_assign_trades_by_exit_date():
+    curve = [("2019-12-31", 100.0), ("2020-01-02", 110.0)]
+    stats = [
+        TradeStat("X", "2019-12-01", "2019-12-20", 5.0, 0.05, 10),
+        TradeStat("Y", "2019-12-15", "2020-01-02", -2.0, -0.02, 5),
+    ]
+    early = period_metrics("A", curve, None, stats, "0000-00-00", "2019-12-31")
+    late = period_metrics("A", curve, None, stats, "2020-01-01", "9999-12-31")
+    assert early.trade_count == 1 and early.net_pnl_total == 5.0
+    assert late.trade_count == 1 and late.net_pnl_total == -2.0
+    assert close(late.total_return, 0.10)
+
+
+def test_breakout_trade_cost_in_r_is_positive_and_consistent():
+    data = _data()
+    sim = simulate_breakout(UNIVERSE, data, 100_000.0, ARM_TP_SPLIT)
+    for t in sim.trades:
+        assert t.risk_usd > 0
+        assert t.slippage_paid > 0  # giriş her zaman açılışta, kayma öder
+        assert close(t.risk_usd, (t.entry_price - t.initial_stop) * t.quantity)
