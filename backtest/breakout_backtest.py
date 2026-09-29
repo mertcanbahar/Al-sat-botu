@@ -1500,7 +1500,8 @@ def write_markdown(results: dict, path: Path) -> None:
     L.append("- **Ort. exposure:** her gün kapanışta açık pozisyonların piyasa değeri / equity; günlerin ortalaması. Al-ve-tut her zaman %100.")
     L.append("- **Piyasada gün oranı:** en az bir pozisyonun açık olduğu günlerin oranı.")
     L.append("- **Exposure'a göre düzeltilmiş CAGR** = CAGR / ort. exposure: sermayenin yalnızca yatırılan kısmının yıllık getirisi "
-             "(kaldıraçla %100 exposure'a ölçeklemenin kabaca karşılığı; nakit getirisi ve kaldıraç maliyeti yok sayılır).")
+             "(kaldıraçla %100 exposure'a ölçeklemenin kabaca karşılığı; nakit getirisi ve kaldıraç maliyeti yok sayılır). "
+             "Exposure çok düşükken bu oran küçük getiri farklarını büyütür; tek başına değil, ham CAGR ve drawdown ile birlikte okunmalı.")
     L.append("")
 
     # 4) Top-3
@@ -1529,7 +1530,7 @@ def write_markdown(results: dict, path: Path) -> None:
     L.append("")
     for label, block in results["periods"].items():
         w = block["_window"]
-        L.append(f"### {label} ({w['start']} → {w['end']})")
+        L.append(f"### {label} ({w['start']} → {w['end']})" if w["start"] else f"### {label} (bu pencerede veri yok)")
         L.append("")
         cols = [(a, block[a]) for a in ALL_ARMS] + [("Al-ve-tut", block["B&H"])]
         _metric_table(L, cols)
