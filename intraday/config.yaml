@@ -1,0 +1,77 @@
+# Gün içi Nasdaq sistemi -- TÜM eşikler burada. Kodda sabit eşik yok.
+# Değiştirdiğin her değer bir sonraki koşuda geçerli olur.
+
+tarayici:
+  fiyat_min: 2.0
+  fiyat_max: 10.0
+  # Önceki 20 seansın ortalama GÜNLÜK toplam hacmi (SIP, split düzeltmeli).
+  # Seans başında bilinen bir değer -> lookahead yok. (Bkz. rapor, varsayımlar)
+  min_gunluk_hacim: 1_000_000
+  # bugünkü kümülatif hacim / son N seansın AYNI DAKİKAYA kadarki
+  # kümülatif hacim ortalaması
+  min_goreli_hacim: 2.0
+  goreli_hacim_gun: 20
+  # göreli hacim için en az kaç geçmiş seans olmalı (yoksa hesaplanmaz)
+  goreli_hacim_min_gun: 10
+  # yarım günler (13:00 kapanış) göreli hacim tabanına katılmasın
+  goreli_hacim_yarim_gunleri_dislama: true
+  # önceki seans kapanışına göre değişim
+  min_gun_ici_degisim_pct: 3.0
+  # "yukari": yalnızca yükselişler (Aşama 2 long-only);
+  # "iki_yonlu": |değişim|
+  degisim_yonu: yukari
+  max_spread_pct: 0.5
+  # spread için, dakika kapanışından en fazla bu kadar önceki quote kabul edilir
+  quote_penceresi_sn: 60
+  # bir sembol-gün için spread'i en fazla bu kadar dakikada sorgula
+  # (API limitini korur). Aşılırsa "spread doğrulanamadı" sayılır.
+  max_quote_sorgu_sembol_gun: 20
+  borsa: NASDAQ
+
+veri:
+  # Canlı akış (Aşama 3+) .env'deki ALPACA_DATA_FEED ile gelir (iex).
+  # Tarama bu akışla yapılır: canlıda ne göreceksek backtest'te de o.
+  tarama_feed: iex
+  # Karşılaştırma/"toplam hacim" akışı. Ücretsiz planda SIP geçmişi
+  # (son 15 dk hariç) erişilebilir varsayılıyor. Boş bırakılırsa atlanır.
+  karsilastirma_feed: sip
+  gecmis_ay: 6
+  # Verinin saklandığı yer (git'e girmez: .cache/ zaten ignore'da)
+  veri_dizini: .cache/intraday
+  # Alpaca ücretsiz plan: 200 istek/dk. Güvenlik payı bırak.
+  istek_limiti_dakika: 180
+  max_yeniden_deneme: 5
+  bekleme_taban_sn: 1.0
+  istek_zaman_asimi_sn: 30
+  # çoklu sembol isteğinde sembol sayısı (URL uzunluğu)
+  sembol_grup_boyutu: 100
+  sayfa_limiti: 10000
+  trading_api_url: https://paper-api.alpaca.markets
+  data_api_url: https://data.alpaca.markets
+
+evren:
+  # Sembol/isim üzerinden eleme kuralları. Hepsi büyük/küçük harf duyarsız
+  # regex. Rapor, her kuralın kaç sembol elediğini ayrı ayrı yazar.
+  isim_kurallari:
+    etf: '\bETFs?\b|\bETNs?\b|Exchange[- ]Traded|\bFund\b|\biShares\b|ProShares|Direxion|GraniteShares|Leverage Shares|\bTradr\b|Defiance|YieldMax|T-Rex|Roundhill|\bIndex\b|\b\d(\.\d+)?[xX]\b|Leveraged|Inverse|Daily .*(Bull|Bear)'
+    warrant: '\bWarrants?\b'
+    right: '\bRights?\b'
+    unit: '\bUnits?\b'
+    preferred: '\bPreferred\b|\bPfd\b|Depositary Shares'
+  # Nasdaq 5 harfli sembollerde 5. harf ek anlamı taşır:
+  # W=warrant, U=unit, R=right, P=preferred (ilk seri).
+  besinci_harf_kurallari:
+    warrant: W
+    unit: U
+    right: R
+    preferred: P
+  # Nokta/eğik çizgi içeren semboller (ör. ABC.WS, ABC.U, ABC/P)
+  ozel_karakter_regex: '[./+=^-]'
+
+rapor:
+  dosya: backtest/results/intraday/scanner_report.md
+  en_sik_n: 20
+  fiyat_dilimleri: [2, 4, 6, 8, 10]
+  # Rapordaki "IEX yeterli mi?" hükmü için eşikler
+  iex_uyari_hacim_orani: 0.05    # IEX hacmi / toplam hacim medyanı bunun altındaysa uyar
+  iex_uyari_quote_yok_pct: 20.0  # sorgulanan dakikaların bu %'sinden fazlasında quote yoksa uyar

@@ -1,0 +1,5 @@
+# Gün içi sistem bağımlılıkları (eski günlük sistemin requirements.txt'sine dokunulmadı)
+requests>=2.31
+PyYAML>=6.0
+pyarrow>=14
+pytest>=7
