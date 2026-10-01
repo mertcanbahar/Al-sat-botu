@@ -1,5 +1,5 @@
 {
-  "cash": 1434.9109207837373,
+  "cash": 0.0,
   "closed_trades": [
     {
       "category": "tech",
@@ -43,6 +43,14 @@
   "halted_marks": 0,
   "halted_since": null,
   "open_positions": {
+    "AAPL": {
+      "category": "tech",
+      "entry_date": "2026-09-30T00:00:00+00:00",
+      "entry_price": 333.019989,
+      "quantity": 4.308783160712125,
+      "stop_price": 311.2749368747298,
+      "symbol": "AAPL"
+    },
     "KO": {
       "category": "consumer",
       "entry_date": "2026-09-04T00:00:00+00:00",
