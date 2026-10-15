@@ -1,27 +1,27 @@
 {
-  "timestamp": "2026-10-14T01:00:03.509916Z",
+  "timestamp": "2026-10-15T00:22:01.286908Z",
   "modules": [
     {
       "name": "twelvedata",
       "status": "warn",
-      "detail": "13/16 sembol",
+      "detail": "11/16 sembol",
       "code": "W-FETCH"
     },
     {
       "name": "indikator",
       "status": "warn",
-      "detail": "13 sembol"
+      "detail": "11 sembol"
     },
     {
       "name": "hacim",
       "status": "warn",
-      "detail": "8/13",
+      "detail": "8/11",
       "code": "W-VOL"
     },
     {
       "name": "kural",
       "status": "ok",
-      "detail": "9 sinyal"
+      "detail": "8 sinyal"
     },
     {
       "name": "portfoy",
