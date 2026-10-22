@@ -1,21 +1,21 @@
 {
-  "timestamp": "2026-10-21T00:28:00.757716Z",
+  "timestamp": "2026-10-22T00:31:04.101594Z",
   "modules": [
     {
       "name": "twelvedata",
       "status": "warn",
-      "detail": "13/16 sembol",
+      "detail": "12/16 sembol",
       "code": "W-FETCH"
     },
     {
       "name": "indikator",
       "status": "warn",
-      "detail": "13 sembol"
+      "detail": "12 sembol"
     },
     {
       "name": "hacim",
       "status": "warn",
-      "detail": "8/13",
+      "detail": "8/12",
       "code": "W-VOL"
     },
     {
