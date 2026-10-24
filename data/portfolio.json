@@ -1,5 +1,5 @@
 {
-  "cash": 0.0,
+  "cash": 3035.2388524158487,
   "closed_trades": [
     {
       "category": "tech",
@@ -36,6 +36,18 @@
       "quantity": 1724.4660082247563,
       "reason": "RSI 76.0 > 75",
       "symbol": "USD/CHF"
+    },
+    {
+      "category": "energy",
+      "entry_date": "2026-09-04T00:00:00+00:00",
+      "entry_price": 159.47,
+      "exit_date": "2026-10-23T00:00:00+00:00",
+      "exit_price": 183.21001,
+      "pnl": 595.4727534959557,
+      "pnl_pct": 0.14886818837398885,
+      "quantity": 25.08308772809933,
+      "reason": "RSI 76.1 > 75",
+      "symbol": "XOM"
     }
   ],
   "halt_resets": 0,
@@ -67,13 +79,13 @@
       "stop_price": 480.9414530560642,
       "symbol": "MSFT"
     },
-    "XOM": {
-      "category": "energy",
-      "entry_date": "2026-09-04T00:00:00+00:00",
-      "entry_price": 159.47,
-      "quantity": 25.08308772809933,
-      "stop_price": 152.68157520534717,
-      "symbol": "XOM"
+    "USD/CHF": {
+      "category": "forex",
+      "entry_date": "2026-10-24T00:00:00+00:00",
+      "entry_price": 0.82502,
+      "quantity": 1891.146761387732,
+      "stop_price": 0.8128859948454863,
+      "symbol": "USD/CHF"
     }
   },
   "paused": false,
