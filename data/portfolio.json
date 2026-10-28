@@ -1,5 +1,5 @@
 {
-  "cash": 3035.2388524158487,
+  "cash": 1472.5988093379344,
   "closed_trades": [
     {
       "category": "tech",
@@ -86,11 +86,19 @@
       "quantity": 1891.146761387732,
       "stop_price": 0.8128859948454863,
       "symbol": "USD/CHF"
+    },
+    "XOM": {
+      "category": "energy",
+      "entry_date": "2026-10-27T00:00:00+00:00",
+      "entry_price": 179.91,
+      "quantity": 8.68567641086051,
+      "stop_price": 168.16477457121456,
+      "symbol": "XOM"
     }
   },
   "paused": false,
   "paused_reason": null,
-  "peak_equity": 10506.024129316454,
+  "peak_equity": 10527.429164030893,
   "starting_capital": 10000.0,
   "stop_reason": null,
   "stopped": false
