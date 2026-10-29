@@ -1,27 +1,26 @@
 {
-  "timestamp": "2026-10-28T01:03:03.247229Z",
+  "timestamp": "2026-10-29T01:39:03.135270Z",
   "modules": [
     {
       "name": "twelvedata",
-      "status": "warn",
-      "detail": "15/16 sembol",
-      "code": "W-FETCH"
+      "status": "ok",
+      "detail": "16/16 sembol"
     },
     {
       "name": "indikator",
-      "status": "warn",
-      "detail": "15 sembol"
+      "status": "ok",
+      "detail": "16 sembol"
     },
     {
       "name": "hacim",
       "status": "warn",
-      "detail": "9/15",
+      "detail": "10/16",
       "code": "W-VOL"
     },
     {
       "name": "kural",
       "status": "ok",
-      "detail": "13 sinyal"
+      "detail": "12 sinyal"
     },
     {
       "name": "portfoy",
