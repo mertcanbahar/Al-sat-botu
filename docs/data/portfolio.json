@@ -1,5 +1,5 @@
 {
-  "cash": 3012.38941392744,
+  "cash": 1292.2414715498685,
   "closed_trades": [
     {
       "category": "tech",
@@ -60,6 +60,18 @@
       "quantity": 1891.146761387732,
       "reason": "EMA20 0.8234 < EMA50 0.8237",
       "symbol": "USD/CHF"
+    },
+    {
+      "category": "energy",
+      "entry_date": "2026-10-27T00:00:00+00:00",
+      "entry_price": 179.91,
+      "exit_date": "2026-11-05T00:00:00+00:00",
+      "exit_price": 165.3,
+      "pnl": -126.89773236267206,
+      "pnl_pct": -0.08120727030181751,
+      "quantity": 8.68567641086051,
+      "reason": "stop_loss",
+      "symbol": "XOM"
     }
   ],
   "halt_resets": 0,
@@ -74,6 +86,14 @@
       "quantity": 4.308783160712125,
       "stop_price": 311.2749368747298,
       "symbol": "AAPL"
+    },
+    "GBP/USD": {
+      "category": "forex",
+      "entry_date": "2026-11-06T00:00:00+00:00",
+      "entry_price": 1.34469,
+      "quantity": 1173.463866427509,
+      "stop_price": 1.3271717025126715,
+      "symbol": "GBP/USD"
     },
     "KO": {
       "category": "consumer",
@@ -91,13 +111,13 @@
       "stop_price": 480.9414530560642,
       "symbol": "MSFT"
     },
-    "XOM": {
-      "category": "energy",
-      "entry_date": "2026-10-27T00:00:00+00:00",
-      "entry_price": 179.91,
-      "quantity": 8.68567641086051,
-      "stop_price": 168.16477457121456,
-      "symbol": "XOM"
+    "USD/JPY": {
+      "category": "forex",
+      "entry_date": "2026-11-06T00:00:00+00:00",
+      "entry_price": 157.98893,
+      "quantity": 9.987694242542227,
+      "stop_price": 155.53160681030982,
+      "symbol": "USD/JPY"
     }
   },
   "paused": false,

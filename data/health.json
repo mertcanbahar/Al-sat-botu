@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-05T02:04:03.107479Z",
+  "timestamp": "2026-11-06T02:06:00.719262Z",
   "modules": [
     {
       "name": "twelvedata",
@@ -21,17 +21,17 @@
     {
       "name": "kural",
       "status": "ok",
-      "detail": "15 sinyal"
+      "detail": "14 sinyal"
     },
     {
       "name": "portfoy",
       "status": "ok",
-      "detail": "4 pozisyon"
+      "detail": "5 pozisyon"
     },
     {
       "name": "telegram",
       "status": "ok",
-      "detail": "gonderildi"
+      "detail": "bekleniyor"
     }
   ]
 }
