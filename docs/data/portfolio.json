@@ -1,5 +1,5 @@
 {
-  "cash": 1292.2414715498685,
+  "cash": 1304.153281490733,
   "closed_trades": [
     {
       "category": "tech",
@@ -72,6 +72,18 @@
       "quantity": 8.68567641086051,
       "reason": "stop_loss",
       "symbol": "XOM"
+    },
+    {
+      "category": "forex",
+      "entry_date": "2026-11-06T00:00:00+00:00",
+      "entry_price": 1.34469,
+      "exit_date": "2026-11-13T00:00:00+00:00",
+      "exit_price": 1.3236,
+      "pnl": -24.74835294295599,
+      "pnl_pct": -0.015683912277179024,
+      "quantity": 1173.463866427509,
+      "reason": "stop_loss",
+      "symbol": "GBP/USD"
     }
   ],
   "halt_resets": 0,
@@ -86,14 +98,6 @@
       "quantity": 4.308783160712125,
       "stop_price": 311.2749368747298,
       "symbol": "AAPL"
-    },
-    "GBP/USD": {
-      "category": "forex",
-      "entry_date": "2026-11-06T00:00:00+00:00",
-      "entry_price": 1.34469,
-      "quantity": 1173.463866427509,
-      "stop_price": 1.3271717025126715,
-      "symbol": "GBP/USD"
     },
     "KO": {
       "category": "consumer",
@@ -110,6 +114,14 @@
       "quantity": 2.7469074279208554,
       "stop_price": 480.9414530560642,
       "symbol": "MSFT"
+    },
+    "USD/CHF": {
+      "category": "forex",
+      "entry_date": "2026-11-13T00:00:00+00:00",
+      "entry_price": 0.83535,
+      "quantity": 1845.076870368811,
+      "stop_price": 0.8204038755083582,
+      "symbol": "USD/CHF"
     },
     "USD/JPY": {
       "category": "forex",
