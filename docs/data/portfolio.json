@@ -1,5 +1,5 @@
 {
-  "cash": 1304.153281490733,
+  "cash": 1120.4799158512412,
   "closed_trades": [
     {
       "category": "tech",
@@ -84,6 +84,18 @@
       "quantity": 1173.463866427509,
       "reason": "stop_loss",
       "symbol": "GBP/USD"
+    },
+    {
+      "category": "tech",
+      "entry_date": "2026-09-25T00:00:00+00:00",
+      "entry_price": 516.16998,
+      "exit_date": "2026-11-20T00:00:00+00:00",
+      "exit_price": 484.51999,
+      "pnl": -86.93959262462067,
+      "pnl_pct": -0.06131699096487553,
+      "quantity": 2.7469074279208554,
+      "reason": "EMA20 517.8524 < EMA50 519.4866",
+      "symbol": "MSFT"
     }
   ],
   "halt_resets": 0,
@@ -99,6 +111,14 @@
       "stop_price": 311.2749368747298,
       "symbol": "AAPL"
     },
+    "AMZN": {
+      "category": "tech",
+      "entry_date": "2026-11-20T00:00:00+00:00",
+      "entry_price": 246.82001,
+      "quantity": 6.136475422501727,
+      "stop_price": 216.96260353208987,
+      "symbol": "AMZN"
+    },
     "KO": {
       "category": "consumer",
       "entry_date": "2026-09-04T00:00:00+00:00",
@@ -106,14 +126,6 @@
       "quantity": 32.554041976879674,
       "stop_price": 85.18309356847575,
       "symbol": "KO"
-    },
-    "MSFT": {
-      "category": "tech",
-      "entry_date": "2026-09-25T00:00:00+00:00",
-      "entry_price": 516.16998,
-      "quantity": 2.7469074279208554,
-      "stop_price": 480.9414530560642,
-      "symbol": "MSFT"
     },
     "USD/CHF": {
       "category": "forex",
