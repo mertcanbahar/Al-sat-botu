@@ -1,5 +1,5 @@
 {
-  "cash": 1120.4799158512412,
+  "cash": 2679.88105021738,
   "closed_trades": [
     {
       "category": "tech",
@@ -96,6 +96,18 @@
       "quantity": 2.7469074279208554,
       "reason": "EMA20 517.8524 < EMA50 519.4866",
       "symbol": "MSFT"
+    },
+    {
+      "category": "tech",
+      "entry_date": "2026-11-20T00:00:00+00:00",
+      "entry_price": 246.82001,
+      "exit_date": "2026-11-27T00:00:00+00:00",
+      "exit_price": 254.12,
+      "pnl": 44.796209219508455,
+      "pnl_pct": 0.02957616766971216,
+      "quantity": 6.136475422501727,
+      "reason": "EMA20 256.1355 < EMA50 256.1632",
+      "symbol": "AMZN"
     }
   ],
   "halt_resets": 0,
@@ -110,14 +122,6 @@
       "quantity": 4.308783160712125,
       "stop_price": 311.2749368747298,
       "symbol": "AAPL"
-    },
-    "AMZN": {
-      "category": "tech",
-      "entry_date": "2026-11-20T00:00:00+00:00",
-      "entry_price": 246.82001,
-      "quantity": 6.136475422501727,
-      "stop_price": 216.96260353208987,
-      "symbol": "AMZN"
     },
     "KO": {
       "category": "consumer",
